@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prudent Finance - Auth</title>
     <link rel="stylesheet" href="style.css">
+    <!-- 1. Add EmailJS SDK -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body id="auth-page">
 
@@ -66,6 +68,10 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // 2. Initialize EmailJS with your Public Key
+        // FIXED: Added quotes around the public key string
+        emailjs.init("-Si1ZuCMJ-3e1B3AU");
+
         // DOM Elements
         const authForm = document.getElementById('auth-form');
         const emailInput = document.getElementById('email');
@@ -113,6 +119,7 @@
             try {
                 if (isSignUpMode) {
                     const result = await createUserWithEmailAndPassword(auth, email, password);
+                    
                     // Initialize User Document in Firestore
                     await setDoc(doc(db, "users", result.user.uid), {
                         email: email,
@@ -122,10 +129,28 @@
                         lastLogin: serverTimestamp(),
                         createdAt: serverTimestamp()
                     });
+
+                    // 3. Send Welcome Email via EmailJS
+                    // Added a try/catch specifically for the email so it doesn't break the whole app if it fails
+                    try {
+                        await emailjs.send("service_bzkdfcr", "template_htbyt4e", {
+                            user_email: email,
+                            user_name: email.split('@')[0],
+                        });
+                        console.log("Email sent!");
+                    } catch (mailError) {
+                        console.error("EmailJS Error:", mailError);
+                    }
+
+                    // Redirect after email is sent
+                    window.location.href = 'home.html';
+
                 } else {
                     await signInWithEmailAndPassword(auth, email, password);
+                    window.location.href = 'home.html';
                 }
             } catch (error) {
+                console.error("Auth error:", error);
                 errorMessage.textContent = getFriendlyErrorMessage(error.code);
                 errorMessage.classList.remove('hidden');
                 submitBtn.disabled = false;
@@ -136,7 +161,7 @@
         // Auth State Observer
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                window.location.href = 'home.html';
+                // We handle redirection in the submit handler to give EmailJS time
             }
         });
 

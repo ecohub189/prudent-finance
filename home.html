@@ -33,26 +33,32 @@
             <span class="text-xl font-bold tracking-tight text-gray-900">Prudent Finance</span>
         </div>
         
-        <div class="flex items-center space-x-4 md:space-x-8">
+        <div class="flex items-center space-x-4 md:space-x-6">
             <!-- Stock Market Sim Link (Locked until Level 5) -->
             <a id="stock-sim-btn" href="#" class="locked-btn flex items-center bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl border border-indigo-100 font-bold text-sm transition-all">
                 <span id="stock-sim-icon" class="mr-2">🔒</span> Stock Sim
             </a>
 
             <div id="admin-badge" class="hidden bg-blue-100 text-blue-700 text-[10px] px-2 py-1 rounded font-black uppercase">Admin</div>
-            <div class="text-center">
-                <p class="text-[10px] uppercase text-gray-400 font-black">Level</p>
-                <p id="nav-level" class="font-bold text-blue-600 text-sm">--</p>
+            
+            <div class="flex items-center bg-gray-50 rounded-2xl px-3 py-1.5 space-x-4 border border-gray-100">
+                <div class="text-center border-r border-gray-200 pr-4">
+                    <p class="text-[9px] uppercase text-gray-400 font-black">Level</p>
+                    <p id="nav-level" class="font-bold text-blue-600 text-xs">--</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-[9px] uppercase text-orange-400 font-black">Streak</p>
+                    <p class="font-bold text-orange-600 text-xs">🔥 <span id="nav-streak">--</span></p>
+                </div>
             </div>
-            <div class="text-center">
-                <p class="text-[10px] uppercase text-gray-400 font-black">XP</p>
-                <p id="nav-xp" class="font-bold text-blue-600 text-sm">--</p>
-            </div>
-            <div class="text-center bg-orange-50 px-3 py-1 rounded-full border border-orange-100">
-                <p class="text-[10px] uppercase text-orange-400 font-black leading-none">Streak</p>
-                <p class="font-bold text-orange-600 text-sm">🔥 <span id="nav-streak">--</span></p>
-            </div>
-            <button id="logout-btn" class="text-sm font-semibold text-gray-500 hover:text-red-500 transition">Logout</button>
+
+            <!-- Profile Button -->
+            <a href="account.html" class="flex items-center space-x-2 bg-white hover:bg-gray-50 border border-gray-200 p-1 pr-3 rounded-full transition shadow-sm">
+                <div id="nav-avatar" class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-xs">?</div>
+                <span id="nav-username" class="text-xs font-bold text-gray-700 truncate max-w-[80px]">Profile</span>
+            </a>
+
+            <button id="logout-btn" class="text-xs font-semibold text-gray-400 hover:text-red-500 transition">Logout</button>
         </div>
     </nav>
 
@@ -93,7 +99,7 @@
     <!-- Main Content -->
     <main class="max-w-5xl mx-auto mt-10 px-6 pb-12">
         <header class="mb-10">
-            <h1 class="text-3xl font-extrabold text-gray-900">Welcome, <span id="user-display-email" class="text-blue-600">User</span>!</h1>
+            <h1 class="text-3xl font-extrabold text-gray-900">Welcome, <span id="user-display-name" class="text-blue-600">Learner</span>!</h1>
             <p class="text-gray-500 mt-1">Ready to level up your financial knowledge?</p>
         </header>
 
@@ -173,7 +179,6 @@
                 window.location.href = 'index.html';
                 return;
             }
-            document.getElementById('user-display-email').textContent = user.email;
 
             if (ADMIN_EMAILS.includes(user.email)) {
                 document.getElementById('admin-panel').classList.remove('hidden');
@@ -360,20 +365,15 @@
             
             let { xp = 0, level = 1, streak = 1, lastLogin, completedLessons = [] } = snap.data() || {};
             
-            // 1. Mark as completed
             completedLessons.push(lessonId);
-
-            // 2. Add 10 XP
             xp += 10;
             
-            // 3. Leveling logic
             const newLevel = Math.floor(xp / 20) + 1;
             if (newLevel > level) {
                 showToast(`LEVEL UP! You are now Level ${newLevel}!`);
                 level = newLevel;
             }
 
-            // 4. Streak check
             const now = new Date();
             const last = lastLogin ? lastLogin.toDate() : new Date(0);
             if (now.toDateString() !== last.toDateString()) {
@@ -387,10 +387,15 @@
             updateUIStats(xp, level, streak);
         }
 
-        function updateUIStats(xp, level, streak) {
-            document.getElementById('nav-xp').textContent = xp;
+        function updateUIStats(xp, level, streak, username = null) {
             document.getElementById('nav-level').textContent = level;
             document.getElementById('nav-streak').textContent = streak;
+
+            if (username) {
+                document.getElementById('nav-username').textContent = username;
+                document.getElementById('nav-avatar').textContent = username.charAt(0).toUpperCase();
+                document.getElementById('user-display-name').textContent = username;
+            }
 
             const simBtn = document.getElementById('stock-sim-btn');
             const simIcon = document.getElementById('stock-sim-icon');
@@ -452,10 +457,13 @@
                 const userRef = doc(db, "users", user.uid);
                 const snap = await getDoc(userRef);
                 if (!snap.exists()) {
-                    await setDoc(userRef, { xp: 0, level: 1, streak: 1, lastLogin: serverTimestamp(), completedLessons: [] });
+                    const defaultData = { xp: 0, level: 1, streak: 1, lastLogin: serverTimestamp(), completedLessons: [], username: "Learner" };
+                    await setDoc(userRef, defaultData);
+                    updateUIStats(0, 1, 1, "Learner");
+                } else {
+                    const data = snap.data();
+                    updateUIStats(data.xp || 0, data.level || 1, data.streak || 1, data.username || "Learner");
                 }
-                const data = (await getDoc(userRef)).data();
-                updateUIStats(data.xp || 0, data.level || 1, data.streak || 1);
             } catch (err) { console.warn("Sync error", err); }
         }
 
