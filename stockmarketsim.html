@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Invested | Pro Market Simulator</title>
+ <style>
+ :root {
+ --bg: #fdfdfd;
+ --surface: #ffffff;
+ --border: #e2e8f0;
+ --text-main: #1e293b;
+ --text-muted: #64748b;
+ --primary: #2563eb;
+ --success: #059669;
+ --danger: #dc2626;
+ --accent: #f59e0b;
+ --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+ --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+ --radius: 12px;
+ }
+
+ * {
+ margin: 0;
+ padding: 0;
+ box-sizing: border-box;
+ font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+ }
+
+ body {
+ background-color: var(--bg);
+ color: var(--text-main);
+ line-height: 1.5;
+ -webkit-font-smoothing: antialiased;
+ padding-bottom: 80px; 
+ }
+
+ .container {
+ max-width: 1400px;
+ margin: 0 auto;
+ padding: 24px;
+ }
+
+ header {
+ display: flex;
+ justify-content: space-between;
+ align-items: flex-end;
+ margin-bottom: 32px;
+ border-bottom: 1px solid var(--border);
+ padding-bottom: 20px;
+ }
+
+ .brand h1 {
+ font-size: 24px;
+ font-weight: 800;
+ letter-spacing: -0.02em;
+ color: var(--text-main);
+ }
+
+ .quick-stats {
+ display: flex;
+ gap: 24px;
+ }
+
+ .stat-item {
+ text-align: right;
+ padding-left: 15px;
+ border-left: 1px solid var(--border);
+ }
+
+ .stat-label {
+ font-size: 10px;
+ text-transform: uppercase;
+ letter-spacing: 0.05em;
+ color: var(--text-muted);
+ margin-bottom: 2px;
+ }
+
+ .stat-value {
+ font-size: 16px;
+ font-weight: 700;
+ color: var(--text-main);
+ }
+
+ .layout {
+ display: grid;
+ grid-template-columns: 1fr 340px;
+ gap: 32px;
+ }
+
+ .card {
+ background: var(--surface);
+ border: 1px solid var(--border);
+ border-radius: var(--radius);
+ padding: 24px;
+ margin-bottom: 24px;
+ box-shadow: var(--shadow-sm);
+ }
+
+ .card-header {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-bottom: 20px;
+ }
+
+ .card-title {
+ font-size: 16px;
+ font-weight: 700;
+ color: var(--text-main);
+ }
+
+ .chart-container {
+ position: relative;
+ height: 300px;
+ width: 100%;
+ }
+
+ .btn {
+ display: inline-flex;
+ align-items: center;
+ justify-content: center;
+ padding: 10px 20px;
+ border-radius: 8px;
+ font-size: 14px;
+ font-weight: 600;
+ cursor: pointer;
+ transition: all 0.2s ease;
+ border: 1px solid transparent;
+ }
+
+ .btn-primary { background: var(--text-main); color: white; }
+ .btn-outline { background: white; border-color: var(--border); color: var(--text-main); }
+ .btn-success { background: var(--success); color: white; }
+ .btn-danger { background: var(--danger); color: white; }
+ .btn-small { padding: 4px 8px; font-size: 11px; }
+ .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+ .stock-list-container {
+ max-height: 400px;
+ overflow-y: auto;
+ }
+
+ .stock-row {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ padding: 12px;
+ border-radius: 8px;
+ cursor: pointer;
+ margin-bottom: 4px;
+ border: 1px solid transparent;
+ }
+
+ .stock-row:hover { background: #f8fafc; }
+ .stock-row.active { background: #eff6ff; border: 1px solid var(--primary); }
+
+ .stock-info .symbol { font-weight: 700; font-size: 14px; }
+ .stock-info .sector-tag { font-size: 9px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
+
+ .ticker-wrap {
+ position: fixed;
+ bottom: 0;
+ left: 0;
+ width: 100%;
+ overflow: hidden;
+ height: 50px;
+ background-color: #1e293b;
+ color: #fff;
+ display: flex;
+ align-items: center;
+ z-index: 1000;
+ }
+
+ .ticker-move {
+ display: flex;
+ width: max-content;
+ animation: ticker 90s linear infinite;
+ }
+
+ .ticker__item {
+ display: inline-flex;
+ align-items: center;
+ padding: 0 40px;
+ font-size: 13px;
+ white-space: nowrap;
+ }
+
+ @keyframes ticker {
+ 0% { transform: translateX(0); }
+ 100% { transform: translateX(-50%); }
+ }
+
+ .leader-row {
+ display: flex;
+ justify-content: space-between;
+ font-size: 13px;
+ padding: 12px 0;
+ border-bottom: 1px solid #f1f5f9;
+ }
+
+ .tab-nav { display: flex; gap: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+ .tab-link { padding-bottom: 10px; cursor: pointer; font-weight: 600; color: var(--text-muted); }
+ .tab-link.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+ .tab-content { display: none; }
+ .tab-content.active { display: block; }
+
+ input, select { padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: white; font-size: 13px; }
+
+ .event-log {
+ max-height: 200px;
+ overflow-y: auto;
+ font-size: 13px;
+ }
+ .event-item {
+ padding: 8px 0;
+ border-bottom: 1px solid #f1f5f9;
+ color: var(--text-muted);
+ }
+ .event-item strong { color: var(--text-main); }
+
+ #aiHints {
+ background: #f0f9ff;
+ border: 1px solid #bae6fd;
+ border-radius: 8px;
+ padding: 12px;
+ margin-bottom: 16px;
+ font-size: 13px;
+ }
+
+ .control-group {
+ display: flex;
+ align-items: center;
+ gap: 10px;
+ background: #f8fafc;
+ padding: 8px 12px;
+ border-radius: 8px;
+ border: 1px solid var(--border);
+ }
+
+ #modalOverlay {
+ position: fixed;
+ top: 0; left: 0; width: 100%; height: 100%;
+ background: rgba(0,0,0,0.5);
+ display: none;
+ justify-content: center;
+ align-items: center;
+ z-index: 2000;
+ }
+ .modal {
+ background: white;
+ padding: 32px;
+ border-radius: var(--radius);
+ max-width: 400px;
+ width: 90%;
+ box-shadow: var(--shadow-md);
+ }
+
+ .ai-portfolio-card {
+ background: #f8fafc;
+ border-radius: 8px;
+ padding: 12px;
+ margin-top: 10px;
+ }
+ .ai-tag {
+ font-size: 10px;
+ padding: 2px 6px;
+ border-radius: 4px;
+ font-weight: 700;
+ text-transform: uppercase;
+ }
+ .tag-agg { background: #fee2e2; color: #991b1b; }
+ .tag-con { background: #dcfce7; color: #166534; }
+ .tag-val { background: #fef9c3; color: #854d0e; }
+ </style>
+</head>
+<body>
+
+<div id="modalOverlay">
+ <div class="modal">
+ <h3 id="modalTitle" style="margin-bottom: 12px;">Confirm Transaction</h3>
+ <p id="modalBody" style="margin-bottom: 24px; font-size: 14px; color: var(--text-muted);"></p>
+ <div style="display: flex; gap: 12px; justify-content: flex-end;">
+ <button class="btn btn-outline" id="modalCancel">Cancel</button>
+ <button class="btn btn-primary" id="modalConfirm">Confirm</button>
+ </div>
+ </div>
+</div>
+
+<div class="container">
+ <header>
+ <div class="brand">
+ <h1>Prudent Finance</h1>
+ <p>Pro Market Simulation <button class="btn btn-outline btn-small" id="resetBtn" style="margin-left: 10px;">Reset All</button></p>
+ </div>
+ <div class="quick-stats">
+ <div class="stat-item">
+ <div class="stat-label">Fed Rate</div>
+ <div class="stat-value" id="fedRate">4.25%</div>
+ </div>
+ <div class="stat-item">
+ <div class="stat-label">Inflation</div>
+ <div class="stat-value" id="inflation">3.1%</div>
+ </div>
+ <div class="stat-item">
+ <div class="stat-label">Wallet</div>
+ <div class="stat-value" id="balance">$1,000.00</div>
+ </div>
+ <div class="stat-item">
+ <div class="stat-label">Total Value</div>
+ <div class="stat-value" id="totalWorth">$1,000.00</div>
+ </div>
+ <div class="stat-item">
+ <div class="stat-label">Day</div>
+ <div class="stat-value" id="dayCounter">1</div>
+ </div>
+ </div>
+ </header>
+
+ <nav class="tab-nav">
+ <div class="tab-link active" onclick="switchTab('trading', event)">Market Terminal</div>
+ <div class="tab-link" onclick="switchTab('analytics', event)">Portfolio & History</div>
+ <div class="tab-link" onclick="switchTab('leaderboard', event)">Competition</div>
+ </nav>
+
+ <div id="trading" class="tab-content active">
+ <div class="layout">
+ <main>
+ <div class="card">
+ <div class="card-header">
+ <h2 class="card-title" id="chartTitle">Market Performance</h2>
+ <div style="display:flex; gap:10px; align-items: center;">
+ <div class="control-group">
+ <button class="btn btn-primary" id="nextDayBtn">Next Session</button>
+ <button class="btn btn-outline" id="autoPlayBtn">▶ Auto</button>
+ <button class="btn btn-danger" id="stopAutoBtn" style="display:none">⏹ Stop</button>
+ <select id="autoSpeed" style="padding: 4px; font-size: 11px;">
+ <option value="1500">1.5s</option>
+ <option value="1000">1.0s</option>
+ <option value="500">0.5s</option>
+ <option value="200">Fast</option>
+ </select>
+ </div>
+ </div>
+ </div>
+ <div class="chart-container">
+ <canvas id="priceChart"></canvas>
+ </div>
+ </div>
+
+ <div id="aiHints">
+ <strong>💡 AI Insights:</strong> <span id="hintText">Analyzing market patterns for trends...</span>
+ </div>
+
+ <div class="card">
+ <h2 class="card-title" style="margin-bottom:12px">Market Intelligence</h2>
+ <div class="event-log" id="eventLog">
+ <div class="event-item">Welcome to the terminal. Markets are open.</div>
+ </div>
+ </div>
+
+ <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+ <div class="card">
+ <h2 class="card-title" style="margin-bottom:16px">Open Positions</h2>
+ <div id="portfolio" style="font-size:14px; color:var(--text-muted)">No active holdings.</div>
+ </div>
+ <div class="card">
+ <h2 class="card-title" style="margin-bottom:16px">Sector Allocation</h2>
+ <div style="height: 180px;">
+ <canvas id="allocationChart"></canvas>
+ </div>
+ </div>
+ </div>
+ </main>
+
+ <aside>
+ <div class="card">
+ <h2 class="card-title" style="margin-bottom:12px">Execution</h2>
+ <div style="font-size:13px; margin-bottom: 12px;">Asset: <span id="selectedStock" style="font-weight:800">None</span></div>
+ <label class="stat-label">Quantity</label>
+ <input type="number" id="shareCount" value="1" min="0.0001" step="0.1" style="width: 100%; margin: 8px 0 16px 0;">
+ <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+ <button class="btn btn-success" id="buyBtn" disabled>Buy</button>
+ <button class="btn btn-danger" id="sellBtn" disabled>Sell</button>
+ </div>
+ <div style="font-size:11px; margin-top:15px; color:var(--text-muted)">Est. Cost: <span id="costEstimate" style="color:var(--text-main)">$0.00</span></div>
+ </div>
+
+ <div class="card">
+ <h2 class="card-title" style="margin-bottom:12px">Market Explorer</h2>
+ <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+ <select id="filterSector">
+ <option value="All">All Assets</option>
+ <option value="Technology">Technology</option>
+ <option value="Energy">Energy</option>
+ <option value="Finance">Finance</option>
+ <option value="Retail">Retail</option>
+ <option value="Healthcare">Healthcare</option>
+ <option value="Industrial">Industrial</option>
+ <option value="Consumer">Consumer Goods</option>
+ <option value="ETF">ETFs / Funds</option>
+ <option value="Crypto">Crypto</option>
+ <option value="Commodity">Commodities</option>
+ <option value="Bond">Bonds</option>
+ </select>
+ <select id="sortOrder">
+ <option value="name">Sort: Name</option>
+ <option value="priceLow">Price: Low to High</option>
+ <option value="priceHigh">Price: High to Low</option>
+ </select>
+ </div>
+ <div class="stock-list-container" id="stockList"></div>
+ </div>
+ </aside>
+ </div>
+ </div>
+
+ <div id="analytics" class="tab-content">
+ <div class="card">
+ <h2 class="card-title" style="margin-bottom: 20px;">Net Worth History</h2>
+ <div class="chart-container">
+ <canvas id="portfolioChart"></canvas>
+ </div>
+ </div>
+ <div class="card">
+ <div class="card-header">
+ <h2 class="card-title">Transaction History</h2>
+ <button class="btn btn-outline btn-small" id="exportBtn">Download CSV</button>
+ </div>
+ <div style="max-height: 300px; overflow-y: auto; margin-top: 15px;">
+ <table style="width:100%; font-size:13px; border-collapse: collapse;" id="historyTable">
+ <thead>
+ <tr style="text-align:left; color:var(--text-muted); border-bottom:1px solid var(--border)">
+ <th style="padding:10px">Day</th><th>Type</th><th>Asset</th><th>Qty</th><th>Price</th><th>Total</th>
+ </tr>
+ </thead>
+ <tbody id="historyBody"></tbody>
+ </table>
+ </div>
+ </div>
+ </div>
+
+ <div id="leaderboard" class="tab-content">
+ <div class="card">
+ <h2 class="card-title">Global Rankings & AI Intelligence</h2>
+ <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">View how your rivals are positioning themselves in the market.</p>
+ <div id="leaderContainer"></div>
+ </div>
+ </div>
+</div>
+
+<div class="ticker-wrap">
+ <div class="ticker-move" id="tickerContent"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script>
+ const fmt = (v) => v.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+ class Stock {
+ constructor(symbol, name, sector, price, vol, div) {
+ this.symbol = symbol;
+ this.name = name;
+ this.sector = sector;
+ this.currentPrice = price;
+ this.priceHistory = [];
+ let currentTemp = price;
+ for(let i=0; i<50; i++) {
+ currentTemp *= (1 + (Math.random()-0.5)*0.01);
+ this.priceHistory.push(currentTemp);
+ }
+ this.volatility = vol;
+ this.dividendYield = div;
+ this.baseVolatility = vol;
+ }
+
+ update(marketDrift, sectorDrifts, macro, day) {
+ let drift = marketDrift + (sectorDrifts[this.sector] || 0);
+ if (this.sector === 'Technology' || this.sector === 'Crypto') drift -= (macro.interestRate - 4) * 0.001;
+ if (this.sector === 'Finance' || this.sector === 'Bond') drift += (macro.interestRate - 4) * 0.0005;
+ 
+ let multiplier = 1.0;
+ if (Math.random() < 0.01) {
+ const eventType = Math.random();
+ if (this.sector === 'Crypto') multiplier = eventType < 0.5 ? 0.85 : 1.15;
+ else if (this.sector === 'Bond') multiplier = eventType < 0.5 ? 0.99 : 1.01;
+ else multiplier = eventType < 0.5 ? 0.94 : 1.06;
+ }
+
+ const rand = (Math.random() - 0.5) * 2 * this.volatility;
+ this.currentPrice *= (1 + drift + rand) * multiplier;
+ this.currentPrice = Math.max(0.001, this.currentPrice);
+ this.priceHistory.push(this.currentPrice);
+ if (this.priceHistory.length > 100) this.priceHistory.shift();
+ }
+ }
+
+ class MarketSimulator {
+ constructor() {
+ this.day = 1;
+ this.balance = 1000;
+ this.positions = new Map();
+ this.transactions = [];
+ this.worthHistory = [1000];
+ this.macro = { interestRate: 4.25, inflation: 3.1 };
+ this.selectedSymbol = null;
+ this.eventLog = [{ day: 1, text: "Simulation started." }];
+ this.autoInterval = null;
+ 
+ this.stocks = [
+ new Stock('AAPL', 'Pear Inc', 'Technology', 150, 0.02, 0.006),
+ new Stock('NVDA', 'GigaChips', 'Technology', 220, 0.04, 0.001),
+ new Stock('MSFT', 'MicroCloud', 'Technology', 330, 0.018, 0.008),
+ new Stock('GOOGL', 'SearchGig', 'Technology', 140, 0.02, 0),
+ new Stock('AMZN', 'ZonRetail', 'Technology', 130, 0.025, 0),
+ new Stock('META', 'SocialLink', 'Technology', 300, 0.03, 0),
+ new Stock('INTC', 'ChipCore', 'Technology', 35, 0.03, 0.02),
+ new Stock('TSM', 'FoundryPro', 'Technology', 100, 0.025, 0.015),
+ new Stock('ADBE', 'CreativeSuite', 'Technology', 450, 0.025, 0),
+ new Stock('ORCL', 'DatabaseOne', 'Technology', 110, 0.02, 0.01),
+ new Stock('JPM', 'Chase Bank', 'Finance', 150, 0.02, 0.025),
+ new Stock('GS', 'GoldBridge', 'Finance', 340, 0.022, 0.02),
+ new Stock('V', 'SwiftCard', 'Finance', 240, 0.015, 0.008),
+ new Stock('MA', 'GlobalPay', 'Finance', 400, 0.016, 0.007),
+ new Stock('BAC', 'America Bank', 'Finance', 30, 0.025, 0.03),
+ new Stock('WFC', 'WestStage', 'Finance', 45, 0.024, 0.028),
+ new Stock('PYPL', 'NetWallet', 'Finance', 60, 0.04, 0),
+ new Stock('AXP', 'BlueCard', 'Finance', 160, 0.02, 0.015),
+ new Stock('XOM', 'Global Fuel', 'Energy', 90, 0.02, 0.035),
+ new Stock('CVX', 'Peak Oil', 'Energy', 150, 0.02, 0.04),
+ new Stock('BP', 'EuroPetro', 'Energy', 35, 0.025, 0.05),
+ new Stock('SHEL', 'SeaShell', 'Energy', 60, 0.022, 0.04),
+ new Stock('NEE', 'NextGenPower', 'Energy', 70, 0.018, 0.03),
+ new Stock('ENB', 'PipeFlow', 'Energy', 35, 0.015, 0.06),
+ new Stock('WMT', 'WallStore', 'Retail', 140, 0.01, 0.015),
+ new Stock('COST', 'BulkClub', 'Retail', 550, 0.012, 0.008),
+ new Stock('TGT', 'RedBullseye', 'Retail', 130, 0.022, 0.03),
+ new Stock('HD', 'HomeFix', 'Retail', 310, 0.015, 0.025),
+ new Stock('KO', 'CokeGlobal', 'Consumer', 60, 0.008, 0.03),
+ new Stock('PEP', 'SnackCo', 'Consumer', 170, 0.01, 0.028),
+ new Stock('PG', 'DailyClean', 'Consumer', 150, 0.009, 0.025),
+ new Stock('NKE', 'SwiftStep', 'Consumer', 100, 0.025, 0.015),
+ new Stock('MCD', 'BurgerKing', 'Consumer', 280, 0.01, 0.022),
+ new Stock('SBUX', 'CaffeineCo', 'Consumer', 95, 0.02, 0.025),
+ new Stock('PFE', 'PharmaLink', 'Healthcare', 45, 0.02, 0.04),
+ new Stock('JNJ', 'HealthCareOne', 'Healthcare', 160, 0.01, 0.03),
+ new Stock('UNH', 'UnitedCare', 'Healthcare', 480, 0.015, 0.015),
+ new Stock('LLY', 'LillyDrug', 'Healthcare', 580, 0.03, 0.008),
+ new Stock('ABBV', 'BioLogic', 'Healthcare', 145, 0.018, 0.04),
+ new Stock('MRK', 'MerckLab', 'Healthcare', 105, 0.015, 0.028),
+ new Stock('GE', 'GeneralElectric', 'Industrial', 110, 0.025, 0.01),
+ new Stock('CAT', 'HeavyBuild', 'Industrial', 250, 0.022, 0.02),
+ new Stock('BA', 'AeroSky', 'Industrial', 190, 0.035, 0),
+ new Stock('UPS', 'BrownParcel', 'Industrial', 150, 0.018, 0.04),
+ new Stock('LMT', 'DefenseTech', 'Industrial', 450, 0.015, 0.025),
+ new Stock('HON', 'SmartIndustries', 'Industrial', 190, 0.015, 0.022),
+ new Stock('SPY', 'Market 500 ETF', 'ETF', 450, 0.008, 0.015),
+ new Stock('QQQ', 'Tech 100 ETF', 'ETF', 380, 0.012, 0.005),
+ new Stock('IWM', 'Small Cap ETF', 'ETF', 190, 0.015, 0.01),
+ new Stock('VTI', 'Total Market ETF', 'ETF', 220, 0.007, 0.016),
+ new Stock('BTC', 'Bitcoin Core', 'Crypto', 42000, 0.08, 0),
+ new Stock('ETH', 'Ether Network', 'Crypto', 2200, 0.10, 0),
+ new Stock('SOL', 'Sun Network', 'Crypto', 95, 0.15, 0),
+ new Stock('GOLD', 'Gold Spot', 'Commodity', 2000, 0.012, 0),
+ new Stock('SLVR', 'Silver Spot', 'Commodity', 23, 0.025, 0),
+ new Stock('OIL', 'Crude Futures', 'Commodity', 75, 0.04, 0),
+ new Stock('BOND', '10Y Treasury', 'Bond', 100, 0.002, 0.042)
+ ];
+
+ this.competitors = [
+ { name: "Nancy (Momentum)", worth: 1000, balance: 1000, personality: "Aggressive", positions: {} },
+ { name: "Chad (Trend)", worth: 1000, balance: 1000, personality: "Conservative", positions: {} },
+ { name: "AI Quant", worth: 1000, balance: 1000, personality: "Value", positions: {} },
+ { name: "Penny (Risky)", worth: 1000, balance: 1000, personality: "Aggressive", positions: {} },
+ { name: "Old School Pete", worth: 1000, balance: 1000, personality: "Conservative", positions: {} }
+ ];
+
+ this.loadProgress();
+ }
+
+ saveProgress() {
+ const data = {
+ day: this.day, balance: this.balance, positions: Array.from(this.positions.entries()),
+ transactions: this.transactions, worthHistory: this.worthHistory,
+ eventLog: this.eventLog, macro: this.macro,
+ stocksData: this.stocks.map(s => ({ symbol: s.symbol, price: s.currentPrice, history: s.priceHistory })),
+ competitors: this.competitors,
+ selectedSymbol: this.selectedSymbol
+ };
+ localStorage.setItem('invested_sim_data_v4', JSON.stringify(data));
+ }
+
+ loadProgress() {
+ const saved = localStorage.getItem('invested_sim_data_v4');
+ if (saved) {
+ const data = JSON.parse(saved);
+ this.day = data.day; this.balance = data.balance; this.positions = new Map(data.positions);
+ this.transactions = data.transactions; this.worthHistory = data.worthHistory;
+ this.eventLog = data.eventLog; this.macro = data.macro; this.competitors = data.competitors;
+ this.selectedSymbol = data.selectedSymbol || null;
+ data.stocksData.forEach(sd => {
+ const s = this.stocks.find(st => st.symbol === sd.symbol);
+ if (s) { s.currentPrice = sd.price; s.priceHistory = sd.history; }
+ });
+ }
+ }
+
+ reset() { localStorage.removeItem('invested_sim_data_v4'); location.reload(); }
+
+ nextDay() {
+ this.day++;
+ this.macro.interestRate += (Math.random() - 0.5) * 0.1;
+ this.macro.interestRate = Math.max(0, this.macro.interestRate);
+ const sectorDrifts = {};
+ ['Technology','Energy','Retail','Finance','Healthcare','Industrial','Consumer','ETF','Crypto','Commodity','Bond'].forEach(s => sectorDrifts[s] = (Math.random()-0.5)*0.005);
+ this.stocks.forEach(s => s.update(0.0002, sectorDrifts, this.macro, this.day));
+ 
+ // Smart AI Logic
+ this.competitors.forEach(c => {
+ this.runAISmartTrades(c);
+ c.worth = this.calculateAIWorth(c);
+ });
+
+ this.worthHistory.push(this.getTotalWorth());
+ this.saveProgress();
+ return this.getAIHint();
+ }
+
+ runAISmartTrades(comp) {
+ // Sell logic
+ Object.keys(comp.positions).forEach(sym => {
+ const stock = this.stocks.find(s => s.symbol === sym);
+ let sellChance = 0.05;
+ if (comp.personality === "Aggressive") sellChance = 0.15;
+ if (comp.personality === "Value") {
+ const avgHistory = stock.priceHistory.slice(-10).reduce((a,b)=>a+b,0)/10;
+ if (stock.currentPrice > avgHistory * 1.2) sellChance = 0.4;
+ }
+ if (Math.random() < sellChance) {
+ const qty = comp.positions[sym] * (0.5 + Math.random() * 0.5);
+ comp.balance += qty * stock.currentPrice;
+ comp.positions[sym] -= qty;
+ if (comp.positions[sym] < 0.001) delete comp.positions[sym];
+ }
+ });
+
+ // Buy logic
+ if (comp.balance > 50) {
+ let targetSector = "All";
+ if (comp.personality === "Aggressive") targetSector = Math.random() < 0.5 ? "Crypto" : "Technology";
+ if (comp.personality === "Conservative") targetSector = Math.random() < 0.5 ? "Bond" : "ETF";
+ 
+ const eligible = this.stocks.filter(s => targetSector === "All" || s.sector === targetSector);
+ const pick = eligible[Math.floor(Math.random() * eligible.length)];
+ 
+ const spend = comp.balance * (0.1 + Math.random() * 0.2);
+ const qty = spend / pick.currentPrice;
+ comp.balance -= spend;
+ comp.positions[pick.symbol] = (comp.positions[pick.symbol] || 0) + qty;
+ }
+ }
+
+ calculateAIWorth(comp) {
+ let total = comp.balance;
+ Object.keys(comp.positions).forEach(sym => {
+ const s = this.stocks.find(st => st.symbol === sym);
+ if (s) total += comp.positions[sym] * s.currentPrice;
+ });
+ return total;
+ }
+
+ getAIHint() {
+ const tech = this.stocks.filter(s => s.sector === 'Technology').sort((a,b) => (b.currentPrice/b.priceHistory[b.priceHistory.length-5]) - (a.currentPrice/a.priceHistory[a.priceHistory.length-5]));
+ const crypto = this.stocks.filter(s => s.sector === 'Crypto').sort((a,b) => (b.currentPrice/b.priceHistory[b.priceHistory.length-5]) - (a.currentPrice/a.priceHistory[a.priceHistory.length-5]));
+ return `Tech leaders: ${tech[0].symbol}, ${tech[1].symbol}. Crypto Volatility: ${crypto[0].symbol} is moving fast. Consider diversification in ETFs.`;
+ }
+
+ trade(symbol, qty, isBuy) {
+ const s = this.stocks.find(st => st.symbol === symbol);
+ const total = s.currentPrice * qty;
+ if (isBuy) {
+ if (this.balance < total) return { success: false, msg: "No funds." };
+ this.balance -= total;
+ const pos = this.positions.get(symbol) || { shares: 0 };
+ this.positions.set(symbol, { shares: pos.shares + qty });
+ } else {
+ const pos = this.positions.get(symbol);
+ if (!pos || pos.shares < qty) return { success: false, msg: "No shares." };
+ this.balance += total;
+ pos.shares -= qty;
+ if (pos.shares <= 0.00001) this.positions.delete(symbol);
+ }
+ this.transactions.push({ d: this.day, t: isBuy?'BUY':'SELL', s: symbol, q: qty, p: s.currentPrice, tot: total });
+ this.saveProgress();
+ return { success: true };
+ }
+
+ getTotalWorth() {
+ let sVal = 0;
+ this.positions.forEach((p, sym) => {
+ const s = this.stocks.find(st => st.symbol === sym);
+ if (s) sVal += p.shares * s.currentPrice;
+ });
+ return this.balance + sVal;
+ }
+
+ getSectorAllocation() {
+ const allocation = {};
+ this.positions.forEach((p, sym) => {
+ const s = this.stocks.find(st => st.symbol === sym);
+ if (s) {
+ const val = p.shares * s.currentPrice;
+ allocation[s.sector] = (allocation[s.sector] || 0) + val;
+ }
+ });
+ return allocation;
+ }
+ }
+
+ const market = new MarketSimulator();
+ let mainChart, portfolioChart, allocChart;
+ let pendingTrade = null;
+
+ function init() {
+ mainChart = new Chart(document.getElementById('priceChart').getContext('2d'), {
+ type: 'line',
+ data: { labels: [], datasets: [] },
+ options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false } } }
+ });
+
+ portfolioChart = new Chart(document.getElementById('portfolioChart').getContext('2d'), {
+ type: 'line',
+ data: { labels: [], datasets: [{ label: 'Net Worth', data: [], borderColor: '#059669', tension: 0.3, fill: true, backgroundColor: 'rgba(5, 150, 105, 0.1)' }] },
+ options: { responsive: true, maintainAspectRatio: false }
+ });
+
+ allocChart = new Chart(document.getElementById('allocationChart').getContext('2d'), {
+ type: 'pie',
+ data: { labels: [], datasets: [{ data: [], backgroundColor: ['#2563eb','#059669','#dc2626','#f59e0b','#8b5cf6','#06b6d4','#ec4899'] }] },
+ options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } }
+ });
+
+ document.getElementById('nextDayBtn').onclick = stepForward;
+ document.getElementById('autoPlayBtn').onclick = startAuto;
+ document.getElementById('stopAutoBtn').onclick = stopAuto;
+ document.getElementById('exportBtn').onclick = exportCSV;
+ document.getElementById('buyBtn').onclick = () => showConfirm(true);
+ document.getElementById('sellBtn').onclick = () => showConfirm(false);
+ document.getElementById('modalConfirm').onclick = executeTrade;
+ document.getElementById('modalCancel').onclick = () => document.getElementById('modalOverlay').style.display = 'none';
+ document.getElementById('resetBtn').onclick = () => { if(confirm("Reset simulation?")) market.reset(); };
+
+ document.getElementById('filterSector').onchange = renderStocks;
+ document.getElementById('sortOrder').onchange = renderStocks;
+
+ if (!market.selectedSymbol && market.stocks.length > 0) {
+ market.selectedSymbol = market.stocks[0].symbol;
+ }
+
+ updateUI();
+ renderStocks();
+ updateCharts();
+ 
+ if (market.selectedSymbol) {
+ selectStock(market.selectedSymbol);
+ }
+ }
+
+ function stepForward() {
+ const hint = market.nextDay();
+ document.getElementById('hintText').textContent = hint;
+ updateUI();
+ updateCharts();
+ }
+
+ function startAuto() {
+ const speed = parseInt(document.getElementById('autoSpeed').value);
+ document.getElementById('autoPlayBtn').style.display = 'none';
+ document.getElementById('stopAutoBtn').style.display = 'block';
+ market.autoInterval = setInterval(stepForward, speed);
+ }
+
+ function stopAuto() {
+ document.getElementById('autoPlayBtn').style.display = 'block';
+ document.getElementById('stopAutoBtn').style.display = 'none';
+ clearInterval(market.autoInterval);
+ }
+
+ function exportCSV() {
+ let csv = "Day,Type,Symbol,Quantity,Price,Total\n";
+ market.transactions.forEach(t => {
+ csv += `${t.d},${t.t},${t.s},${t.q},${t.p},${t.tot}\n`;
+ });
+ const blob = new Blob([csv], { type: 'text/csv' });
+ const url = window.URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.setAttribute('hidden', '');
+ a.setAttribute('href', url);
+ a.setAttribute('download', 'trade_history.csv');
+ document.body.appendChild(a);
+ a.click();
+ document.body.removeChild(a);
+ }
+
+ function showConfirm(isBuy) {
+ const q = parseFloat(document.getElementById('shareCount').value);
+ const s = market.stocks.find(st => st.symbol === market.selectedSymbol);
+ pendingTrade = { sym: market.selectedSymbol, q, isBuy };
+ document.getElementById('modalTitle').textContent = isBuy ? 'Confirm Buy' : 'Confirm Sell';
+ document.getElementById('modalBody').textContent = `Transacting ${q} units of ${s.symbol} at $${fmt(s.currentPrice)}?`;
+ document.getElementById('modalOverlay').style.display = 'flex';
+ }
+
+ function executeTrade() {
+ const result = market.trade(pendingTrade.sym, pendingTrade.q, pendingTrade.isBuy);
+ document.getElementById('modalOverlay').style.display = 'none';
+ if (result.success) updateUI();
+ else alert(result.msg);
+ }
+
+ function updateUI() {
+ document.getElementById('balance').textContent = '$' + fmt(market.balance);
+ document.getElementById('totalWorth').textContent = '$' + fmt(market.getTotalWorth());
+ document.getElementById('dayCounter').textContent = market.day;
+ document.getElementById('fedRate').textContent = market.macro.interestRate.toFixed(2) + '%';
+ document.getElementById('inflation').textContent = market.macro.inflation.toFixed(2) + '%';
+ renderPositions();
+ renderHistory();
+ renderLeaderboard();
+ renderTicker();
+ renderStocks();
+ updateAllocation();
+ }
+
+ function updateAllocation() {
+ const data = market.getSectorAllocation();
+ allocChart.data.labels = Object.keys(data);
+ allocChart.data.datasets[0].data = Object.values(data);
+ allocChart.update();
+ }
+
+ function renderStocks() {
+ const list = document.getElementById('stockList');
+ const sector = document.getElementById('filterSector').value;
+ const sort = document.getElementById('sortOrder').value;
+ 
+ let filtered = market.stocks.filter(s => sector === 'All' || s.sector === sector);
+ 
+ if (sort === 'priceLow') filtered.sort((a,b) => a.currentPrice - b.currentPrice);
+ else if (sort === 'priceHigh') filtered.sort((a,b) => b.currentPrice - a.currentPrice);
+ else filtered.sort((a,b) => a.symbol.localeCompare(b.symbol));
+
+ list.innerHTML = filtered.map(s => `
+ <div class="stock-row ${market.selectedSymbol === s.symbol ? 'active' : ''}" onclick="selectStock('${s.symbol}')">
+ <div class="stock-info">
+ <span class="symbol">${s.symbol} <span class="sector-tag">${s.sector}</span></span>
+ <div style="font-size:11px; color:var(--text-muted)">${s.name}</div>
+ </div>
+ <div style="text-align:right">
+ <div style="font-weight:700">$${fmt(s.currentPrice)}</div>
+ </div>
+ </div>
+ `).join('');
+ }
+
+ function renderPositions() {
+ const p = document.getElementById('portfolio');
+ if (market.positions.size === 0) { p.innerHTML = 'No active holdings.'; return; }
+ let html = '<table style="width:100%">';
+ market.positions.forEach((pos, sym) => {
+ const s = market.stocks.find(st => st.symbol === sym);
+ html += `<tr><td><b>${sym}</b></td><td align="right">${pos.shares.toFixed(4)} units</td><td align="right">$${fmt(pos.shares * (s?.currentPrice || 0))}</td></tr>`;
+ });
+ p.innerHTML = html + '</table>';
+ }
+
+ function renderHistory() {
+ const body = document.getElementById('historyBody');
+ body.innerHTML = market.transactions.slice().reverse().map(t => `
+ <tr><td style="padding:8px">${t.d}</td><td style="color:${t.t==='BUY'?'var(--success)':'var(--danger)'}">${t.t}</td><td>${t.s}</td><td>${t.q.toFixed(4)}</td><td>$${fmt(t.p)}</td><td>$${fmt(t.tot)}</td></tr>
+ `).join('');
+ }
+
+ function renderLeaderboard() {
+ const cont = document.getElementById('leaderContainer');
+ const allComps = [...market.competitors, { name: "You (Investor)", worth: market.getTotalWorth(), isPlayer: true }];
+ const sorted = allComps.sort((a,b) => b.worth - a.worth);
+ 
+ cont.innerHTML = sorted.map((c, i) => {
+ const tag = c.isPlayer ? '' : `<span class="ai-tag ${c.personality === 'Aggressive' ? 'tag-agg' : c.personality === 'Value' ? 'tag-val' : 'tag-con'}">${c.personality}</span>`;
+ 
+ let portfolioHTML = "";
+ if (!c.isPlayer) {
+ const holdingSymbols = Object.keys(c.positions).slice(0, 3);
+ portfolioHTML = `<div class="ai-portfolio-card">
+ <div style="font-size: 11px; color: var(--text-muted)">Top Holdings: ${holdingSymbols.join(', ') || 'Liquidating...'}</div>
+ <div style="font-size: 11px; color: var(--text-muted)">Cash: $${fmt(c.balance)}</div>
+ </div>`;
+ }
+
+ return `
+ <div class="leader-row" style="${c.isPlayer ? 'background: #eff6ff; border-left: 4px solid var(--primary); padding: 12px; border-radius: 8px;' : ''}">
+ <div style="width: 100%">
+ <div style="display: flex; justify-content: space-between; align-items: center;">
+ <span>${i+1}. <b>${c.name}</b> ${tag}</span>
+ <span style="font-weight: 800">$${fmt(c.worth)}</span>
+ </div>
+ ${portfolioHTML}
+ </div>
+ </div>`;
+ }).join('');
+ }
+
+ function renderTicker() {
+ const ticker = document.getElementById('tickerContent');
+ const stocks = market.stocks.slice(0, 15).map(s => `<div class="ticker__item"><b>${s.symbol}</b> <span style="color:${s.currentPrice > s.priceHistory[s.priceHistory.length-2] ? 'var(--success)' : 'var(--danger)'};margin-left:8px">$${fmt(s.currentPrice)}</span></div>`).join('');
+ ticker.innerHTML = stocks + stocks;
+ }
+
+ function selectStock(sym) {
+ market.selectedSymbol = sym;
+ market.saveProgress();
+ document.getElementById('selectedStock').textContent = sym;
+ document.getElementById('buyBtn').disabled = false;
+ document.getElementById('sellBtn').disabled = !market.positions.has(sym);
+ renderStocks();
+ updateCharts();
+ }
+
+ function updateCharts() {
+ if (market.selectedSymbol) {
+ const s = market.stocks.find(st => st.symbol === market.selectedSymbol);
+ if (s) {
+ mainChart.data.labels = Array.from({length: s.priceHistory.length}, (_, i) => i + 1);
+ mainChart.data.datasets = [{ data: [...s.priceHistory], borderColor: '#2563eb', borderWidth: 2, pointRadius: 0, tension: 0.2 }];
+ mainChart.update();
+ }
+ }
+ portfolioChart.data.labels = Array.from({length: market.worthHistory.length}, (_, i) => i + 1);
+ portfolioChart.data.datasets[0].data = [...market.worthHistory];
+ portfolioChart.update();
+ }
+
+ function switchTab(id, e) {
+ document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+ document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ if(e) e.target.classList.add('active');
+ }
+
+ window.onload = init;
+</script>
+</body>
+</html>
