@@ -8,10 +8,15 @@
     <style>
         .hidden { display: none !important; }
         .admin-only { border: 2px dashed #3b82f6; }
-        /* Custom scrollbar for better look */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        /* Modal Animation */
+        .modal-enter { opacity: 0; transform: scale(0.95); }
+        .modal-enter-active { opacity: 1; transform: scale(1); transition: all 0.3s ease-out; }
+
+        .locked-btn { cursor: not-allowed; filter: grayscale(1); opacity: 0.6; }
     </style>
 </head>
 <body class="bg-gray-100 font-sans text-gray-800">
@@ -22,13 +27,18 @@
     </div>
 
     <!-- Navbar -->
-    <nav class="bg-white shadow-sm px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+    <nav class="bg-white shadow-sm px-6 py-4 flex flex-wrap gap-4 justify-between items-center sticky top-0 z-50">
         <div class="flex items-center space-x-2">
             <div class="bg-blue-600 text-white p-1.5 rounded-lg font-bold">PF</div>
             <span class="text-xl font-bold tracking-tight text-gray-900">Prudent Finance</span>
         </div>
         
         <div class="flex items-center space-x-4 md:space-x-8">
+            <!-- Stock Market Sim Link (Locked until Level 5) -->
+            <a id="stock-sim-btn" href="#" class="locked-btn flex items-center bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl border border-indigo-100 font-bold text-sm transition-all">
+                <span id="stock-sim-icon" class="mr-2">🔒</span> Stock Sim
+            </a>
+
             <div id="admin-badge" class="hidden bg-blue-100 text-blue-700 text-[10px] px-2 py-1 rounded font-black uppercase">Admin</div>
             <div class="text-center">
                 <p class="text-[10px] uppercase text-gray-400 font-black">Level</p>
@@ -46,6 +56,40 @@
         </div>
     </nav>
 
+    <!-- Lesson Modal -->
+    <div id="lesson-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h2 id="modal-title" class="text-2xl font-bold text-gray-900">Lesson Title</h2>
+                <button id="close-modal-btn" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div id="modal-content" class="p-8 overflow-y-auto flex-grow">
+                <div id="reading-section">
+                    <div id="modal-notes" class="prose prose-blue text-gray-600 leading-relaxed mb-8"></div>
+                    <button id="start-quiz-btn" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition shadow-lg">Take the Quiz</button>
+                </div>
+
+                <div id="quiz-section" class="hidden">
+                    <div class="mb-4 flex justify-between items-center">
+                        <span id="quiz-progress" class="text-xs font-bold text-blue-600 uppercase tracking-widest">Question 1 of 5</span>
+                    </div>
+                    <h3 id="quiz-question" class="text-xl font-bold text-gray-900 mb-6">Question Text</h3>
+                    <div id="quiz-options" class="space-y-3"></div>
+                </div>
+
+                <div id="result-section" class="hidden text-center py-10">
+                    <div class="text-6xl mb-4">🎉</div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-2">Lesson Complete!</h3>
+                    <p id="reward-message" class="text-gray-500 mb-6">You've earned <span class="font-bold text-blue-600">+10 XP</span></p>
+                    <button id="finish-lesson-btn" class="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition">Return Home</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content -->
     <main class="max-w-5xl mx-auto mt-10 px-6 pb-12">
         <header class="mb-10">
@@ -56,11 +100,10 @@
         <!-- Admin Panel -->
         <section id="admin-panel" class="hidden mb-12 bg-white p-8 rounded-2xl border-2 border-blue-500 shadow-xl">
             <h2 class="text-2xl font-bold text-blue-800 mb-6 flex items-center">
-                <span class="mr-2 text-2xl">📝</span> Admin: Lesson Builder
+                <span class="mr-2 text-2xl">🏗️</span> Admin: Lesson Builder
             </h2>
             
             <div class="space-y-6">
-                <!-- Basic Info -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-bold mb-1 text-gray-600">Lesson Name</label>
@@ -72,21 +115,17 @@
                     </div>
                 </div>
 
-                <!-- Notes -->
                 <div>
                     <label class="block text-sm font-bold mb-1 text-gray-600">Lesson Content (Reading Material)</label>
-                    <textarea id="lesson-notes" rows="4" placeholder="Teach the topic here. Use simple language for all ages!" class="w-full p-3 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-blue-400 transition"></textarea>
+                    <textarea id="lesson-notes" rows="4" placeholder="Teach the topic here..." class="w-full p-3 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-blue-400 transition"></textarea>
                 </div>
 
-                <!-- Question Builder -->
                 <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-bold text-gray-700">Quiz Questions</h3>
                         <button id="add-question-btn" class="bg-blue-100 text-blue-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-200 transition">+ Add Question</button>
                     </div>
-                    <div id="questions-list" class="space-y-6">
-                        <!-- Questions will appear here -->
-                    </div>
+                    <div id="questions-list" class="space-y-6"></div>
                 </div>
 
                 <div class="flex items-center justify-between pt-6 border-t">
@@ -100,7 +139,7 @@
 
         <!-- Lessons Container -->
         <h2 class="text-xl font-bold mb-4 flex items-center">
-            <span class="mr-2">🚀</span> Available Lessons
+            <span class="mr-2">💡</span> Available Lessons
         </h2>
         <div id="lessons-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="animate-pulse bg-gray-200 h-40 rounded-2xl"></div>
@@ -110,7 +149,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, onSnapshot, deleteDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, onSnapshot, deleteDoc, serverTimestamp, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAIJzGEUMmy1dSc6dRNFGeBZLVwd7IKA-A",
@@ -126,8 +165,9 @@
         const db = getFirestore(app);
 
         const ADMIN_EMAILS = ["shloktanna2010@gmail.com", "aaravnpota100@gmail.com", "om4boston@gmail.com"];
+        let currentLesson = null;
+        let currentQuestionIdx = 0;
 
-        // Global state listener for auth
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
                 window.location.href = 'index.html';
@@ -138,7 +178,6 @@
             if (ADMIN_EMAILS.includes(user.email)) {
                 document.getElementById('admin-panel').classList.remove('hidden');
                 document.getElementById('admin-badge').classList.remove('hidden');
-                // Only add a question if the list is empty
                 if (document.getElementById('questions-list').children.length === 0) {
                     addNewQuestion();
                 }
@@ -148,16 +187,13 @@
             setupLessonsListener();
         });
 
-        // UI Toast function
         function showToast(message, isError = false) {
             const toast = document.getElementById('toast');
             const msgEl = document.getElementById('toast-message');
             msgEl.textContent = message;
             toast.className = `fixed top-5 right-5 z-[100] px-6 py-3 rounded-xl shadow-2xl transition-all transform duration-300 ${isError ? 'bg-red-600' : 'bg-green-600'} text-white`;
             toast.classList.remove('hidden');
-            setTimeout(() => {
-                toast.classList.add('hidden');
-            }, 3000);
+            setTimeout(() => toast.classList.add('hidden'), 3000);
         }
 
         // --- ADMIN FUNCTIONS ---
@@ -167,7 +203,6 @@
             const qContainer = document.createElement('div');
             qContainer.id = `q-container-${qId}`;
             qContainer.className = "p-5 bg-white rounded-xl border border-gray-200 relative shadow-sm";
-            
             qContainer.innerHTML = `
                 <button class="remove-q absolute top-3 right-3 text-gray-300 hover:text-red-500 transition">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -177,22 +212,10 @@
                     <input type="text" placeholder="What is a budget?" class="q-text w-full p-2 border-b-2 border-gray-100 focus:border-blue-400 outline-none font-medium transition">
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                        <label class="text-[10px] font-bold text-gray-400">Choice A</label>
-                        <input type="text" class="opt-1 w-full p-2 bg-gray-50 rounded border border-transparent focus:border-blue-200 outline-none text-sm transition">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-gray-400">Choice B</label>
-                        <input type="text" class="opt-2 w-full p-2 bg-gray-50 rounded border border-transparent focus:border-blue-200 outline-none text-sm transition">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-gray-400">Choice C</label>
-                        <input type="text" class="opt-3 w-full p-2 bg-gray-50 rounded border border-transparent focus:border-blue-200 outline-none text-sm transition">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-gray-400">Choice D</label>
-                        <input type="text" class="opt-4 w-full p-2 bg-gray-50 rounded border border-transparent focus:border-blue-200 outline-none text-sm transition">
-                    </div>
+                    <div><input type="text" placeholder="Option A" class="opt-1 w-full p-2 bg-gray-50 rounded border text-sm"></div>
+                    <div><input type="text" placeholder="Option B" class="opt-2 w-full p-2 bg-gray-50 rounded border text-sm"></div>
+                    <div><input type="text" placeholder="Option C" class="opt-3 w-full p-2 bg-gray-50 rounded border text-sm"></div>
+                    <div><input type="text" placeholder="Option D" class="opt-4 w-full p-2 bg-gray-50 rounded border text-sm"></div>
                 </div>
                 <div class="mt-4 flex items-center">
                     <label class="text-xs font-bold text-blue-600 mr-3">Correct Answer:</label>
@@ -204,12 +227,7 @@
                     </select>
                 </div>
             `;
-            
-            // Add click listener to remove button
-            qContainer.querySelector('.remove-q').onclick = () => {
-                qContainer.remove();
-            };
-            
+            qContainer.querySelector('.remove-q').onclick = () => qContainer.remove();
             document.getElementById('questions-list').appendChild(qContainer);
         }
 
@@ -220,37 +238,26 @@
             const title = document.getElementById('lesson-title').value.trim();
             const desc = document.getElementById('lesson-desc').value.trim();
             const notes = document.getElementById('lesson-notes').value.trim();
-            
             const qContainers = document.querySelectorAll('[id^="q-container-"]');
             
-            // Validate inputs
             if (!title || !desc || !notes || qContainers.length === 0) {
                 showToast("Please fill out all fields and add at least one question.", true);
                 return;
             }
 
-            const finalQuestions = Array.from(qContainers).map(cont => {
-                return {
-                    question: cont.querySelector('.q-text').value.trim(),
-                    options: [
-                        cont.querySelector('.opt-1').value.trim(),
-                        cont.querySelector('.opt-2').value.trim(),
-                        cont.querySelector('.opt-3').value.trim(),
-                        cont.querySelector('.opt-4').value.trim()
-                    ],
-                    correctIndex: parseInt(cont.querySelector('.correct-opt').value)
-                };
-            });
-
-            // Check for empty question fields
-            if (finalQuestions.some(q => !q.question || q.options.some(o => !o))) {
-                showToast("Please fill out all question texts and options.", true);
-                return;
-            }
+            const finalQuestions = Array.from(qContainers).map(cont => ({
+                question: cont.querySelector('.q-text').value.trim(),
+                options: [
+                    cont.querySelector('.opt-1').value.trim(),
+                    cont.querySelector('.opt-2').value.trim(),
+                    cont.querySelector('.opt-3').value.trim(),
+                    cont.querySelector('.opt-4').value.trim()
+                ],
+                correctIndex: parseInt(cont.querySelector('.correct-opt').value)
+            }));
 
             btn.disabled = true;
             btn.textContent = "Publishing...";
-            btn.classList.add('opacity-50');
 
             try {
                 await addDoc(collection(db, "lessons"), {
@@ -262,118 +269,197 @@
                     createdBy: auth.currentUser.email
                 });
                 
-                // Clear Form
                 document.getElementById('lesson-title').value = '';
                 document.getElementById('lesson-desc').value = '';
                 document.getElementById('lesson-notes').value = '';
                 document.getElementById('questions-list').innerHTML = '';
                 addNewQuestion();
-                
                 showToast("Lesson published successfully!");
             } catch (e) {
-                console.error("Error publishing:", e);
-                showToast("Error publishing: " + e.message, true);
+                showToast("Error: " + e.message, true);
             } finally {
                 btn.disabled = false;
                 btn.textContent = "Publish Lesson";
-                btn.classList.remove('opacity-50');
             }
         };
+
+        // --- LESSON PLAYER LOGIC ---
+
+        function openLesson(lesson) {
+            currentLesson = lesson;
+            currentQuestionIdx = 0;
+            document.getElementById('modal-title').textContent = lesson.title;
+            document.getElementById('modal-notes').textContent = lesson.notes;
+            
+            document.getElementById('reading-section').classList.remove('hidden');
+            document.getElementById('quiz-section').classList.add('hidden');
+            document.getElementById('result-section').classList.add('hidden');
+            document.getElementById('lesson-modal').classList.remove('hidden');
+        }
+
+        document.getElementById('start-quiz-btn').onclick = () => {
+            document.getElementById('reading-section').classList.add('hidden');
+            document.getElementById('quiz-section').classList.remove('hidden');
+            showQuestion();
+        };
+
+        function showQuestion() {
+            const q = currentLesson.questions[currentQuestionIdx];
+            document.getElementById('quiz-progress').textContent = `Question ${currentQuestionIdx + 1} of ${currentLesson.questions.length}`;
+            document.getElementById('quiz-question').textContent = q.question;
+            
+            const optionsEl = document.getElementById('quiz-options');
+            optionsEl.innerHTML = '';
+            
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-blue-400 hover:bg-blue-50 transition font-medium text-gray-700";
+                btn.textContent = opt;
+                btn.onclick = () => handleAnswer(idx);
+                optionsEl.appendChild(btn);
+            });
+        }
+
+        async function handleAnswer(idx) {
+            const q = currentLesson.questions[currentQuestionIdx];
+            if (idx === q.correctIndex) {
+                if (currentQuestionIdx < currentLesson.questions.length - 1) {
+                    currentQuestionIdx++;
+                    showQuestion();
+                } else {
+                    const alreadyDone = await checkAlreadyDone(currentLesson.id);
+                    if (!alreadyDone) {
+                        await awardXp(currentLesson.id);
+                        document.getElementById('reward-message').innerHTML = `You've earned <span class="font-bold text-blue-600">+10 XP</span>`;
+                    } else {
+                        document.getElementById('reward-message').innerHTML = `<span class="text-orange-600 font-bold">Review Complete!</span><br><span class="text-xs">No XP awarded (Already completed).</span>`;
+                    }
+                    document.getElementById('quiz-section').classList.add('hidden');
+                    document.getElementById('result-section').classList.remove('hidden');
+                }
+            } else {
+                showToast("Oops! That's not quite right. Try again!", true);
+            }
+        }
+
+        async function checkAlreadyDone(lessonId) {
+            const user = auth.currentUser;
+            const userRef = doc(db, "users", user.uid);
+            const snap = await getDoc(userRef);
+            if (snap.exists()) {
+                const completed = snap.data().completedLessons || [];
+                return completed.includes(lessonId);
+            }
+            return false;
+        }
+
+        async function awardXp(lessonId) {
+            const user = auth.currentUser;
+            const userRef = doc(db, "users", user.uid);
+            const snap = await getDoc(userRef);
+            
+            let { xp = 0, level = 1, streak = 1, lastLogin, completedLessons = [] } = snap.data() || {};
+            
+            // 1. Mark as completed
+            completedLessons.push(lessonId);
+
+            // 2. Add 10 XP
+            xp += 10;
+            
+            // 3. Leveling logic
+            const newLevel = Math.floor(xp / 20) + 1;
+            if (newLevel > level) {
+                showToast(`LEVEL UP! You are now Level ${newLevel}!`);
+                level = newLevel;
+            }
+
+            // 4. Streak check
+            const now = new Date();
+            const last = lastLogin ? lastLogin.toDate() : new Date(0);
+            if (now.toDateString() !== last.toDateString()) {
+                const diff = Math.floor((now.setHours(0,0,0,0) - last.setHours(0,0,0,0)) / 86400000);
+                streak = (diff === 1) ? streak + 1 : 1;
+                lastLogin = serverTimestamp();
+            }
+
+            await updateDoc(userRef, { xp, level, streak, lastLogin: serverTimestamp(), completedLessons: arrayUnion(lessonId) });
+            
+            updateUIStats(xp, level, streak);
+        }
+
+        function updateUIStats(xp, level, streak) {
+            document.getElementById('nav-xp').textContent = xp;
+            document.getElementById('nav-level').textContent = level;
+            document.getElementById('nav-streak').textContent = streak;
+
+            const simBtn = document.getElementById('stock-sim-btn');
+            const simIcon = document.getElementById('stock-sim-icon');
+            if (level >= 5) {
+                simBtn.classList.remove('locked-btn');
+                simBtn.href = "stockmarketsim.html";
+                simIcon.textContent = "📈";
+                simBtn.title = "Access Stock Market Simulator";
+            } else {
+                simBtn.classList.add('locked-btn');
+                simBtn.href = "#";
+                simIcon.textContent = "🔒";
+                simBtn.title = "Unlocks at Level 5";
+            }
+        }
+
+        document.getElementById('finish-lesson-btn').onclick = () => document.getElementById('lesson-modal').classList.add('hidden');
+        document.getElementById('close-modal-btn').onclick = () => document.getElementById('lesson-modal').classList.add('hidden');
 
         // --- LESSON DISPLAY ---
 
         function setupLessonsListener() {
-            // No limit or complex query to avoid index errors in this sandbox
-            const lessonsRef = collection(db, "lessons");
-            
-            onSnapshot(lessonsRef, (snapshot) => {
+            onSnapshot(collection(db, "lessons"), (snapshot) => {
                 const grid = document.getElementById('lessons-grid');
                 grid.innerHTML = '';
-
-                // Manual sort in JS to avoid index requirement for simple setups
                 const lessons = [];
                 snapshot.forEach(doc => lessons.push({id: doc.id, ...doc.data()}));
                 lessons.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
                 lessons.forEach((lesson) => {
                     const card = document.createElement('div');
-                    card.className = "group bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition relative flex flex-col";
-                    
-                    const isAdmin = auth.currentUser.email === ADMIN_EMAIL;
-
+                    card.className = "group bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition relative flex flex-col cursor-pointer";
+                    const isAdmin = ADMIN_EMAILS.includes(auth.currentUser.email);
                     card.innerHTML = `
-                        ${isAdmin ? `
-                            <button class="delete-lesson-btn hidden group-hover:block absolute top-2 right-2 text-[10px] bg-red-50 text-red-500 px-2 py-1 rounded font-bold hover:bg-red-500 hover:text-white transition">
-                                Delete
-                            </button>
-                        ` : ''}
-                        <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center mb-4 font-bold text-sm">
-                            ${lesson.questions?.length || 0}Q
-                        </div>
+                        ${isAdmin ? `<button class="delete-lesson-btn absolute top-2 right-2 text-[10px] bg-red-50 text-red-500 px-2 py-1 rounded font-bold hover:bg-red-500 hover:text-white transition">Delete</button>` : ''}
+                        <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center mb-4 font-bold text-sm">${lesson.questions?.length || 0}Q</div>
                         <h3 class="font-bold text-lg text-gray-900">${lesson.title}</h3>
                         <p class="text-xs text-gray-500 mt-2 line-clamp-2 flex-grow">${lesson.description}</p>
-                        <button class="mt-4 w-full py-2.5 bg-gray-50 text-blue-600 text-sm font-bold rounded-xl hover:bg-blue-600 hover:text-white transition group-hover:bg-blue-600 group-hover:text-white">
-                            Start Learning
-                        </button>
+                        <button class="start-btn mt-4 w-full py-2.5 bg-gray-50 text-blue-600 text-sm font-bold rounded-xl group-hover:bg-blue-600 group-hover:text-white transition">Start Learning</button>
                     `;
-
-                    // Handle delete button
+                    card.querySelector('.start-btn').onclick = () => openLesson(lesson);
                     if (isAdmin) {
                         card.querySelector('.delete-lesson-btn').onclick = async (e) => {
                             e.stopPropagation();
-                            if (confirm("Delete this lesson? This cannot be undone.")) {
-                                try {
-                                    await deleteDoc(doc(db, "lessons", lesson.id));
-                                    showToast("Lesson deleted.");
-                                } catch (err) {
-                                    showToast("Error deleting lesson.", true);
-                                }
+                            if (confirm("Delete this lesson?")) {
+                                await deleteDoc(doc(db, "lessons", lesson.id));
+                                showToast("Lesson deleted.");
                             }
                         };
                     }
-
                     grid.appendChild(card);
                 });
-
-                if (snapshot.empty) {
-                    grid.innerHTML = `
-                        <div class="col-span-full py-10 text-center bg-white rounded-2xl border-2 border-dashed border-gray-200">
-                            <p class="text-gray-400 italic">No lessons available yet. Get started by creating one!</p>
-                        </div>
-                    `;
-                }
+                if (snapshot.empty) grid.innerHTML = `<div class="col-span-full py-10 text-center text-gray-400 italic">No lessons yet.</div>`;
             });
         }
-
-        // --- STATS LOGIC ---
 
         async function syncUserStats(user) {
             try {
                 const userRef = doc(db, "users", user.uid);
                 const snap = await getDoc(userRef);
-                
-                if (snap.exists()) {
-                    let { streak = 1, lastLogin, xp = 0, level = 1 } = snap.data();
-                    const now = new Date();
-                    const last = lastLogin ? lastLogin.toDate() : new Date(0);
-                    
-                    if (now.toDateString() !== last.toDateString()) {
-                        const diff = Math.floor((now.setHours(0,0,0,0) - last.setHours(0,0,0,0)) / 86400000);
-                        streak = (diff === 1) ? streak + 1 : 1;
-                        await updateDoc(userRef, { streak, lastLogin: serverTimestamp() });
-                    }
-                    
-                    document.getElementById('nav-xp').textContent = xp;
-                    document.getElementById('nav-level').textContent = level;
-                    document.getElementById('nav-streak').textContent = streak;
+                if (!snap.exists()) {
+                    await setDoc(userRef, { xp: 0, level: 1, streak: 1, lastLogin: serverTimestamp(), completedLessons: [] });
                 }
-            } catch (err) {
-                console.warn("Stats sync skipped or failed:", err);
-            }
+                const data = (await getDoc(userRef)).data();
+                updateUIStats(data.xp || 0, data.level || 1, data.streak || 1);
+            } catch (err) { console.warn("Sync error", err); }
         }
 
         document.getElementById('logout-btn').onclick = () => signOut(auth);
     </script>
 </body>
 </html>
-
