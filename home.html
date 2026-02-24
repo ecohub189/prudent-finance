@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home - Prudent Finance</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Added Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         .hidden { display: none !important; }
         .admin-only { border: 2px dashed #3b82f6; }
@@ -12,6 +14,79 @@
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         
+        /* Path Styling */
+        .lesson-path-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+            position: relative;
+            padding-bottom: 4rem;
+        }
+
+        .lesson-node {
+            position: relative;
+            z-index: 10;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .lesson-node:hover:not(.locked) {
+            transform: scale(1.1);
+        }
+
+        .node-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 0 rgba(0,0,0,0.1);
+            border: 4px solid white;
+            position: relative;
+        }
+
+        .node-circle::after {
+            content: '';
+            position: absolute;
+            inset: -8px;
+            border-radius: 50%;
+            border: 4px solid transparent;
+            transition: border-color 0.3s;
+        }
+
+        .lesson-node.completed .node-circle::after {
+            border-color: #22c55e;
+        }
+
+        .node-title {
+            position: absolute;
+            width: 200px;
+            text-align: center;
+            top: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: 800;
+            font-size: 0.875rem;
+            color: #475569;
+            pointer-events: none;
+        }
+
+        .path-svg {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .locked {
+            filter: grayscale(1);
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
         /* Modal Animation */
         .modal-enter { opacity: 0; transform: scale(0.95); }
         .modal-enter-active { opacity: 1; transform: scale(1); transition: all 0.3s ease-out; }
@@ -34,11 +109,12 @@
         </div>
         
         <div class="flex items-center space-x-4 md:space-x-6">
-            <!-- Stock Market Sim Link (Locked until Level 5) -->
             <a id="stock-sim-btn" href="#" class="locked-btn flex items-center bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl border border-indigo-100 font-bold text-sm transition-all">
                 <span id="stock-sim-icon" class="mr-2">🔒</span> Stock Sim
             </a>
-
+            <a id="calc-btn" href="calc.html" class="flex items-center bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl border border-indigo-100 font-bold text-sm transition-all">
+                <span id="calc-icon" class="mr-2">🖩</span> Financial Calculators
+            </a>
             <div id="admin-badge" class="hidden bg-blue-100 text-blue-700 text-[10px] px-2 py-1 rounded font-black uppercase">Admin</div>
             
             <div class="flex items-center bg-gray-50 rounded-2xl px-3 py-1.5 space-x-4 border border-gray-100">
@@ -52,7 +128,6 @@
                 </div>
             </div>
 
-            <!-- Profile Button -->
             <a href="account.html" class="flex items-center space-x-2 bg-white hover:bg-gray-50 border border-gray-200 p-1 pr-3 rounded-full transition shadow-sm">
                 <div id="nav-avatar" class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-xs">?</div>
                 <span id="nav-username" class="text-xs font-bold text-gray-700 truncate max-w-[80px]">Profile</span>
@@ -96,9 +171,41 @@
         </div>
     </div>
 
+    <!-- Daily Bonus Modal -->
+    <div id="daily-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+        <div class="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden transform transition-all">
+            <div class="p-8 text-center">
+                <div class="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span class="text-4xl">💡</span>
+                </div>
+                <h2 class="text-2xl font-black text-gray-900 mb-2">Daily Finance Bonus</h2>
+                <p id="daily-status-msg" class="text-gray-500 mb-8 font-medium">Test your knowledge for a massive 30 XP boost! You can only attempt this once every 24 hours.</p>
+
+                <div id="daily-quiz-area">
+                    <div class="bg-gray-50 p-6 rounded-3xl border-2 border-dashed border-gray-200 mb-6">
+                        <p class="font-bold text-gray-700 text-lg">"What is the 'Rule of 72' used to estimate in finance?"</p>
+                    </div>
+                    <div class="grid grid-cols-1 gap-3" id="daily-options">
+                        <button onclick="handleDaily(0)" class="w-full py-4 px-6 rounded-2xl border-2 border-gray-100 hover:border-yellow-400 hover:bg-yellow-50 transition font-bold text-gray-700">A) Your annual tax return</button>
+                        <button onclick="handleDaily(1)" class="w-full py-4 px-6 rounded-2xl border-2 border-gray-100 hover:border-yellow-400 hover:bg-yellow-50 transition font-bold text-gray-700">B) Time to double an investment</button>
+                        <button onclick="handleDaily(2)" class="w-full py-4 px-6 rounded-2xl border-2 border-gray-100 hover:border-yellow-400 hover:bg-yellow-50 transition font-bold text-gray-700">C) Maximum credit card debt</button>
+                        <button onclick="handleDaily(3)" class="w-full py-4 px-6 rounded-2xl border-2 border-gray-100 hover:border-yellow-400 hover:bg-yellow-50 transition font-bold text-gray-700">D) Retirement age requirements</button>
+                    </div>
+                </div>
+
+                <div id="daily-complete-area" class="hidden">
+                    <div class="text-green-500 font-bold text-xl mb-4">✅ Quest Completed</div>
+                    <p class="text-gray-400 mb-6">Come back tomorrow for a new challenge!</p>
+                </div>
+
+                <button id="close-daily-btn" class="mt-8 text-gray-400 hover:text-gray-600 font-bold text-sm uppercase tracking-widest">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content -->
-    <main class="max-w-5xl mx-auto mt-10 px-6 pb-12">
-        <header class="mb-10">
+    <main class="max-w-3xl mx-auto mt-10 px-6 pb-12">
+        <header class="mb-10 text-center">
             <h1 class="text-3xl font-extrabold text-gray-900">Welcome, <span id="user-display-name" class="text-blue-600">Learner</span>!</h1>
             <p class="text-gray-500 mt-1">Ready to level up your financial knowledge?</p>
         </header>
@@ -122,7 +229,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-bold mb-1 text-gray-600">Lesson Content (Reading Material)</label>
+                    <label class="block text-sm font-bold mb-1 text-gray-600">Lesson Content</label>
                     <textarea id="lesson-notes" rows="4" placeholder="Teach the topic here..." class="w-full p-3 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-blue-400 transition"></textarea>
                 </div>
 
@@ -135,7 +242,6 @@
                 </div>
 
                 <div class="flex items-center justify-between pt-6 border-t">
-                    <p class="text-xs text-gray-400">Published lessons appear instantly for all users.</p>
                     <button id="create-lesson-btn" class="bg-blue-600 text-white font-bold py-3 px-10 rounded-xl hover:bg-blue-700 shadow-lg transition active:scale-95">
                         Publish Lesson
                     </button>
@@ -143,14 +249,25 @@
             </div>
         </section>
 
-        <!-- Lessons Container -->
-        <h2 class="text-xl font-bold mb-4 flex items-center">
-            <span class="mr-2">💡</span> Available Lessons
-        </h2>
-        <div id="lessons-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="animate-pulse bg-gray-200 h-40 rounded-2xl"></div>
+        <!-- Dynamic Lesson Path -->
+        <div id="path-container" class="lesson-path-container">
+            <svg id="path-svg" class="path-svg" width="400" height="0"></svg>
+            <div id="lessons-list" class="w-full flex flex-col items-center gap-20">
+                <div class="animate-pulse bg-gray-200 w-20 h-20 rounded-full"></div>
+            </div>
         </div>
     </main>
+
+    <!-- Daily Bonus Coin Icon -->
+    <div id="daily-bonus-trigger" class="fixed bottom-8 left-8 z-[50] cursor-pointer group">
+        <div class="relative">
+            <div class="absolute inset-0 bg-yellow-400 rounded-full blur-lg opacity-40 group-hover:opacity-70 transition-opacity animate-pulse"></div>
+            <div class="w-16 h-16 bg-gradient-to-tr from-yellow-600 via-yellow-400 to-yellow-200 rounded-full border-4 border-white shadow-xl flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300">
+                <span class="text-3xl">🪙</span>
+            </div>
+            <div class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-black border-2 border-white">+30 XP</div>
+        </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
@@ -171,8 +288,80 @@
         const db = getFirestore(app);
 
         const ADMIN_EMAILS = ["shloktanna2010@gmail.com", "aaravnpota100@gmail.com", "om4boston@gmail.com"];
+        const CORRECT_DAILY_IDX = 1;
         let currentLesson = null;
         let currentQuestionIdx = 0;
+        let completedLessonsIds = [];
+        let currentLevelGlobal = 0; // Tracking for level-up logic
+
+        // UI Element Mappings
+        const elements = {
+            toast: document.getElementById('toast'),
+            toastMsg: document.getElementById('toast-message'),
+            adminPanel: document.getElementById('admin-panel'),
+            adminBadge: document.getElementById('admin-badge'),
+            qList: document.getElementById('questions-list'),
+            dailyModal: document.getElementById('daily-modal'),
+            dailyQuiz: document.getElementById('daily-quiz-area'),
+            dailyDone: document.getElementById('daily-complete-area'),
+            lessonsList: document.getElementById('lessons-list'),
+            pathSvg: document.getElementById('path-svg')
+        };
+
+        // --- Confetti Logic ---
+        function triggerLevelUpConfetti() {
+            const duration = 3 * 1000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+            function randomInRange(min, max) {
+              return Math.random() * (max - min) + min;
+            }
+
+            const interval = setInterval(function() {
+              const timeLeft = animationEnd - Date.now();
+              if (timeLeft <= 0) return clearInterval(interval);
+              const particleCount = 50 * (timeLeft / duration);
+              confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+              confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+            }, 250);
+        }
+
+        // --- Core Functions ---
+
+        window.showToast = function(message, isError = false) {
+            elements.toastMsg.textContent = message;
+            elements.toast.className = `fixed top-5 right-5 z-[100] px-6 py-3 rounded-xl shadow-2xl transition-all transform duration-300 ${isError ? 'bg-red-600' : 'bg-green-600'} text-white`;
+            elements.toast.classList.remove('hidden');
+            setTimeout(() => elements.toast.classList.add('hidden'), 3000);
+        };
+
+        window.updateUIStats = function(xp, level, streak, username = null) {
+            const prevLevel = currentLevelGlobal;
+            currentLevelGlobal = parseInt(level);
+            
+            // Trigger confetti if level increases
+            if (prevLevel !== 0 && currentLevelGlobal > prevLevel) {
+                triggerLevelUpConfetti();
+                window.showToast(`LEVEL UP! You are now Level ${level}!`);
+            }
+
+            document.getElementById('nav-level').textContent = level;
+            document.getElementById('nav-streak').textContent = streak;
+            if (username) {
+                document.getElementById('nav-username').textContent = username;
+                document.getElementById('nav-avatar').textContent = username.charAt(0).toUpperCase();
+                document.getElementById('user-display-name').textContent = username;
+            }
+            const simBtn = document.getElementById('stock-sim-btn');
+            if (level >= 5) {
+                simBtn.classList.remove('locked-btn');
+                simBtn.href = "stockmarketsim.html";
+                document.getElementById('stock-sim-icon').textContent = "📈";
+            }
+        };
+
+        // --- Auth Logic ---
 
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
@@ -181,124 +370,140 @@
             }
 
             if (ADMIN_EMAILS.includes(user.email)) {
-                document.getElementById('admin-panel').classList.remove('hidden');
-                document.getElementById('admin-badge').classList.remove('hidden');
-                if (document.getElementById('questions-list').children.length === 0) {
-                    addNewQuestion();
-                }
+                elements.adminPanel.classList.remove('hidden');
+                elements.adminBadge.classList.remove('hidden');
+                if (elements.qList.children.length === 0) addNewQuestion();
             }
 
             await syncUserStats(user);
             setupLessonsListener();
         });
 
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('toast');
-            const msgEl = document.getElementById('toast-message');
-            msgEl.textContent = message;
-            toast.className = `fixed top-5 right-5 z-[100] px-6 py-3 rounded-xl shadow-2xl transition-all transform duration-300 ${isError ? 'bg-red-600' : 'bg-green-600'} text-white`;
-            toast.classList.remove('hidden');
-            setTimeout(() => toast.classList.add('hidden'), 3000);
-        }
-
-        // --- ADMIN FUNCTIONS ---
-
-        function addNewQuestion() {
-            const qId = Date.now();
-            const qContainer = document.createElement('div');
-            qContainer.id = `q-container-${qId}`;
-            qContainer.className = "p-5 bg-white rounded-xl border border-gray-200 relative shadow-sm";
-            qContainer.innerHTML = `
-                <button class="remove-q absolute top-3 right-3 text-gray-300 hover:text-red-500 transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-                <div class="mb-4">
-                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Question</label>
-                    <input type="text" placeholder="What is a budget?" class="q-text w-full p-2 border-b-2 border-gray-100 focus:border-blue-400 outline-none font-medium transition">
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div><input type="text" placeholder="Option A" class="opt-1 w-full p-2 bg-gray-50 rounded border text-sm"></div>
-                    <div><input type="text" placeholder="Option B" class="opt-2 w-full p-2 bg-gray-50 rounded border text-sm"></div>
-                    <div><input type="text" placeholder="Option C" class="opt-3 w-full p-2 bg-gray-50 rounded border text-sm"></div>
-                    <div><input type="text" placeholder="Option D" class="opt-4 w-full p-2 bg-gray-50 rounded border text-sm"></div>
-                </div>
-                <div class="mt-4 flex items-center">
-                    <label class="text-xs font-bold text-blue-600 mr-3">Correct Answer:</label>
-                    <select class="correct-opt bg-blue-50 text-blue-700 text-xs p-1 px-2 rounded font-bold cursor-pointer outline-none">
-                        <option value="0">Choice A</option>
-                        <option value="1">Choice B</option>
-                        <option value="2">Choice C</option>
-                        <option value="3">Choice D</option>
-                    </select>
-                </div>
-            `;
-            qContainer.querySelector('.remove-q').onclick = () => qContainer.remove();
-            document.getElementById('questions-list').appendChild(qContainer);
-        }
-
-        document.getElementById('add-question-btn').onclick = addNewQuestion;
-
-        document.getElementById('create-lesson-btn').onclick = async () => {
-            const btn = document.getElementById('create-lesson-btn');
-            const title = document.getElementById('lesson-title').value.trim();
-            const desc = document.getElementById('lesson-desc').value.trim();
-            const notes = document.getElementById('lesson-notes').value.trim();
-            const qContainers = document.querySelectorAll('[id^="q-container-"]');
-            
-            if (!title || !desc || !notes || qContainers.length === 0) {
-                showToast("Please fill out all fields and add at least one question.", true);
-                return;
+        async function syncUserStats(user) {
+            const snap = await getDoc(doc(db, "users", user.uid));
+            if (snap.exists()) {
+                const data = snap.data();
+                completedLessonsIds = data.completedLessons || [];
+                window.updateUIStats(data.xp, data.level, data.streak, data.username);
             }
+        }
 
-            const finalQuestions = Array.from(qContainers).map(cont => ({
-                question: cont.querySelector('.q-text').value.trim(),
-                options: [
-                    cont.querySelector('.opt-1').value.trim(),
-                    cont.querySelector('.opt-2').value.trim(),
-                    cont.querySelector('.opt-3').value.trim(),
-                    cont.querySelector('.opt-4').value.trim()
-                ],
-                correctIndex: parseInt(cont.querySelector('.correct-opt').value)
-            }));
+        // --- Daily Bonus Logic ---
 
-            btn.disabled = true;
-            btn.textContent = "Publishing...";
+        document.getElementById('daily-bonus-trigger').onclick = async () => {
+            const user = auth.currentUser;
+            if(!user) return;
 
-            try {
-                await addDoc(collection(db, "lessons"), {
-                    title,
-                    description: desc,
-                    notes: notes,
-                    questions: finalQuestions,
-                    createdAt: serverTimestamp(),
-                    createdBy: auth.currentUser.email
-                });
+            const snap = await getDoc(doc(db, "users", user.uid));
+            const data = snap.data() || {};
+            const today = new Date().toDateString();
+
+            if (data.lastDailyBonusDate === today) {
+                elements.dailyQuiz.classList.add('hidden');
+                elements.dailyDone.classList.remove('hidden');
+            } else {
+                elements.dailyQuiz.classList.remove('hidden');
+                elements.dailyDone.classList.add('hidden');
+            }
+            elements.dailyModal.classList.remove('hidden');
+        };
+
+        window.handleDaily = async (idx) => {
+            const user = auth.currentUser;
+            if(!user) return;
+
+            if (idx === CORRECT_DAILY_IDX) {
+                const userRef = doc(db, "users", user.uid);
+                const snap = await getDoc(userRef);
+                let { xp = 0, streak = 0 } = snap.data() || {};
                 
-                document.getElementById('lesson-title').value = '';
-                document.getElementById('lesson-desc').value = '';
-                document.getElementById('lesson-notes').value = '';
-                document.getElementById('questions-list').innerHTML = '';
-                addNewQuestion();
-                showToast("Lesson published successfully!");
-            } catch (e) {
-                showToast("Error: " + e.message, true);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = "Publish Lesson";
+                xp += 30;
+                const newLevel = Math.floor(xp / 20) + 1;
+                const today = new Date().toDateString();
+
+                await updateDoc(userRef, { xp, level: newLevel, lastDailyBonusDate: today });
+                window.updateUIStats(xp, newLevel, streak);
+                
+                elements.dailyQuiz.classList.add('hidden');
+                elements.dailyDone.classList.remove('hidden');
+                window.showToast("Correct! +30 XP Awarded!");
+            } else {
+                window.showToast("Incorrect. Try thinking about how interest adds up!", true);
             }
         };
 
-        // --- LESSON PLAYER LOGIC ---
+        document.getElementById('close-daily-btn').onclick = () => elements.dailyModal.classList.add('hidden');
+
+        // --- Lesson Logic ---
+
+        let cachedLessons = []; // To redraw path instantly
+
+        function renderPath(lessons) {
+            const list = elements.lessonsList;
+            const svg = elements.pathSvg;
+            list.innerHTML = '';
+            
+            const isAdmin = ADMIN_EMAILS.includes(auth.currentUser?.email);
+            let pathPoints = [];
+
+            lessons.forEach((lesson, index) => {
+                const isCompleted = completedLessonsIds.includes(lesson.id);
+                // Real-time lock logic: unlock if previous is in completedLessonsIds array
+                const isLocked = index > 0 && !completedLessonsIds.includes(lessons[index-1].id);
+                const xOffset = index % 2 === 0 ? -40 : 40;
+
+                const node = document.createElement('div');
+                node.className = `lesson-node ${isCompleted ? 'completed' : ''} ${isLocked ? 'locked' : ''}`;
+                node.style.transform = `translateX(${xOffset}px)`;
+                node.innerHTML = `
+                    <div class="node-circle ${isCompleted ? 'bg-green-500' : (isLocked ? 'bg-gray-300' : 'bg-blue-600')} text-white">
+                        ${isLocked ? '🔒' : (isCompleted ? '✓' : '★')}
+                    </div>
+                    <div class="node-title">${lesson.title}</div>
+                    ${isAdmin ? `<button class="delete-btn absolute -top-2 -right-10 bg-red-100 text-red-600 text-[10px] p-1 rounded font-bold">Del</button>` : ''}
+                `;
+
+                if (!isLocked) node.onclick = () => openLesson(lesson);
+                else node.onclick = () => window.showToast("Complete previous lesson first!", true);
+
+                if (isAdmin) {
+                    node.querySelector('.delete-btn').onclick = async (e) => {
+                        e.stopPropagation();
+                        if (confirm("Delete this lesson?")) await deleteDoc(doc(db, "lessons", lesson.id));
+                    };
+                }
+
+                list.appendChild(node);
+                pathPoints.push({ x: 200 + xOffset, y: index * 144 + 40 });
+            });
+
+            svg.setAttribute('height', lessons.length * 144 + 80);
+            let d = pathPoints.length ? `M ${pathPoints[0].x} ${pathPoints[0].y}` : '';
+            for (let i = 1; i < pathPoints.length; i++) {
+                const prev = pathPoints[i-1];
+                const curr = pathPoints[i];
+                d += ` C ${prev.x} ${prev.y + 60}, ${curr.x} ${curr.y - 60}, ${curr.x} ${curr.y}`;
+            }
+            svg.innerHTML = `<path d="${d}" fill="none" stroke="#e2e8f0" stroke-width="8" stroke-linecap="round" />`;
+        }
+
+        function setupLessonsListener() {
+            onSnapshot(collection(db, "lessons"), (snapshot) => {
+                const lessons = [];
+                snapshot.forEach(doc => lessons.push({id: doc.id, ...doc.data()}));
+                lessons.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+                cachedLessons = lessons;
+                renderPath(lessons);
+            });
+        }
 
         function openLesson(lesson) {
             currentLesson = lesson;
             currentQuestionIdx = 0;
             document.getElementById('modal-title').textContent = lesson.title;
             document.getElementById('modal-notes').textContent = lesson.notes;
-            
             document.getElementById('reading-section').classList.remove('hidden');
-            document.getElementById('quiz-section').classList.add('hidden');
-            document.getElementById('result-section').classList.add('hidden');
+            ['quiz-section', 'result-section'].forEach(id => document.getElementById(id).classList.add('hidden'));
             document.getElementById('lesson-modal').classList.remove('hidden');
         }
 
@@ -312,162 +517,426 @@
             const q = currentLesson.questions[currentQuestionIdx];
             document.getElementById('quiz-progress').textContent = `Question ${currentQuestionIdx + 1} of ${currentLesson.questions.length}`;
             document.getElementById('quiz-question').textContent = q.question;
-            
             const optionsEl = document.getElementById('quiz-options');
             optionsEl.innerHTML = '';
-            
             q.options.forEach((opt, idx) => {
                 const btn = document.createElement('button');
-                btn.className = "w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-blue-400 hover:bg-blue-50 transition font-medium text-gray-700";
+                btn.className = "w-full text-left p-4 rounded-xl border-2 border-gray-100 hover:border-blue-400 hover:bg-blue-50 transition font-medium";
                 btn.textContent = opt;
-                btn.onclick = () => handleAnswer(idx);
+                btn.onclick = () => handleLessonAnswer(idx);
                 optionsEl.appendChild(btn);
             });
         }
 
-        async function handleAnswer(idx) {
-            const q = currentLesson.questions[currentQuestionIdx];
-            if (idx === q.correctIndex) {
+        async function handleLessonAnswer(idx) {
+            if (idx === currentLesson.questions[currentQuestionIdx].correctIndex) {
                 if (currentQuestionIdx < currentLesson.questions.length - 1) {
                     currentQuestionIdx++;
                     showQuestion();
                 } else {
-                    const alreadyDone = await checkAlreadyDone(currentLesson.id);
+                    const alreadyDone = completedLessonsIds.includes(currentLesson.id);
                     if (!alreadyDone) {
-                        await awardXp(currentLesson.id);
-                        document.getElementById('reward-message').innerHTML = `You've earned <span class="font-bold text-blue-600">+10 XP</span>`;
-                    } else {
-                        document.getElementById('reward-message').innerHTML = `<span class="text-orange-600 font-bold">Review Complete!</span><br><span class="text-xs">No XP awarded (Already completed).</span>`;
+                        const userRef = doc(db, "users", auth.currentUser.uid);
+                        const snap = await getDoc(userRef);
+                        let { xp = 0, level = 1, streak = 0 } = snap.data();
+                        xp += 10;
+                        level = Math.floor(xp / 20) + 1;
+                        
+                        // Local update for instant unlocking
+                        completedLessonsIds.push(currentLesson.id);
+                        
+                        await updateDoc(userRef, { xp, level, completedLessons: arrayUnion(currentLesson.id) });
+                        window.updateUIStats(xp, level, streak);
+                        renderPath(cachedLessons); // Instant Re-render of the map
                     }
+                    document.getElementById('reward-message').innerHTML = alreadyDone ? "Review Complete!" : "You've earned <span class='text-blue-600'>+10 XP</span>";
                     document.getElementById('quiz-section').classList.add('hidden');
                     document.getElementById('result-section').classList.remove('hidden');
                 }
-            } else {
-                showToast("Oops! That's not quite right. Try again!", true);
-            }
+            } else { window.showToast("Try again!", true); }
         }
 
-        async function checkAlreadyDone(lessonId) {
-            const user = auth.currentUser;
-            const userRef = doc(db, "users", user.uid);
-            const snap = await getDoc(userRef);
-            if (snap.exists()) {
-                const completed = snap.data().completedLessons || [];
-                return completed.includes(lessonId);
-            }
-            return false;
+        // --- Admin Builder Functions ---
+
+        function addNewQuestion() {
+            const qId = Date.now();
+            const qContainer = document.createElement('div');
+            qContainer.id = `q-container-${qId}`;
+            qContainer.className = "p-5 bg-white rounded-xl border border-gray-200 relative shadow-sm";
+            qContainer.innerHTML = `
+                <button class="remove-q absolute top-3 right-3 text-gray-300 hover:text-red-500 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Question</label>
+                    <input type="text" placeholder="Question text" class="q-text w-full p-2 border-b-2 border-gray-100 focus:border-blue-400 outline-none font-medium transition">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input type="text" placeholder="Option A" class="opt-1 w-full p-2 bg-gray-50 rounded border text-sm">
+                    <input type="text" placeholder="Option B" class="opt-2 w-full p-2 bg-gray-50 rounded border text-sm">
+                    <input type="text" placeholder="Option C" class="opt-3 w-full p-2 bg-gray-50 rounded border text-sm">
+                    <input type="text" placeholder="Option D" class="opt-4 w-full p-2 bg-gray-50 rounded border text-sm">
+                </div>
+                <div class="mt-4 flex items-center">
+                    <label class="text-xs font-bold text-blue-600 mr-3">Correct:</label>
+                    <select class="correct-opt bg-blue-50 text-blue-700 text-xs p-1 px-2 rounded font-bold cursor-pointer">
+                        <option value="0">Choice A</option>
+                        <option value="1">Choice B</option>
+                        <option value="2">Choice C</option>
+                        <option value="3">Choice D</option>
+                    </select>
+                </div>
+            `;
+            qContainer.querySelector('.remove-q').onclick = () => qContainer.remove();
+            elements.qList.appendChild(qContainer);
         }
 
-        async function awardXp(lessonId) {
-            const user = auth.currentUser;
-            const userRef = doc(db, "users", user.uid);
-            const snap = await getDoc(userRef);
+        document.getElementById('add-question-btn').onclick = addNewQuestion;
+
+        document.getElementById('create-lesson-btn').onclick = async () => {
+            const btn = document.getElementById('create-lesson-btn');
+            const title = document.getElementById('lesson-title').value.trim();
+            const desc = document.getElementById('lesson-desc').value.trim();
+            const notes = document.getElementById('lesson-notes').value.trim();
+            const qContainers = document.querySelectorAll('[id^="q-container-"]');
             
-            let { xp = 0, level = 1, streak = 1, lastLogin, completedLessons = [] } = snap.data() || {};
-            
-            completedLessons.push(lessonId);
-            xp += 10;
-            
-            const newLevel = Math.floor(xp / 20) + 1;
-            if (newLevel > level) {
-                showToast(`LEVEL UP! You are now Level ${newLevel}!`);
-                level = newLevel;
+            if (!title || !desc || !notes || qContainers.length === 0) {
+                window.showToast("Please fill all fields.", true);
+                return;
             }
 
-            const now = new Date();
-            const last = lastLogin ? lastLogin.toDate() : new Date(0);
-            if (now.toDateString() !== last.toDateString()) {
-                const diff = Math.floor((now.setHours(0,0,0,0) - last.setHours(0,0,0,0)) / 86400000);
-                streak = (diff === 1) ? streak + 1 : 1;
-                lastLogin = serverTimestamp();
-            }
+            const questions = Array.from(qContainers).map(cont => ({
+                question: cont.querySelector('.q-text').value.trim(),
+                options: [
+                    cont.querySelector('.opt-1').value.trim(),
+                    cont.querySelector('.opt-2').value.trim(),
+                    cont.querySelector('.opt-3').value.trim(),
+                    cont.querySelector('.opt-4').value.trim()
+                ],
+                correctIndex: parseInt(cont.querySelector('.correct-opt').value)
+            }));
 
-            await updateDoc(userRef, { xp, level, streak, lastLogin: serverTimestamp(), completedLessons: arrayUnion(lessonId) });
-            
-            updateUIStats(xp, level, streak);
-        }
-
-        function updateUIStats(xp, level, streak, username = null) {
-            document.getElementById('nav-level').textContent = level;
-            document.getElementById('nav-streak').textContent = streak;
-
-            if (username) {
-                document.getElementById('nav-username').textContent = username;
-                document.getElementById('nav-avatar').textContent = username.charAt(0).toUpperCase();
-                document.getElementById('user-display-name').textContent = username;
-            }
-
-            const simBtn = document.getElementById('stock-sim-btn');
-            const simIcon = document.getElementById('stock-sim-icon');
-            if (level >= 5) {
-                simBtn.classList.remove('locked-btn');
-                simBtn.href = "stockmarketsim.html";
-                simIcon.textContent = "📈";
-                simBtn.title = "Access Stock Market Simulator";
-            } else {
-                simBtn.classList.add('locked-btn');
-                simBtn.href = "#";
-                simIcon.textContent = "🔒";
-                simBtn.title = "Unlocks at Level 5";
-            }
-        }
-
-        document.getElementById('finish-lesson-btn').onclick = () => document.getElementById('lesson-modal').classList.add('hidden');
-        document.getElementById('close-modal-btn').onclick = () => document.getElementById('lesson-modal').classList.add('hidden');
-
-        // --- LESSON DISPLAY ---
-
-        function setupLessonsListener() {
-            onSnapshot(collection(db, "lessons"), (snapshot) => {
-                const grid = document.getElementById('lessons-grid');
-                grid.innerHTML = '';
-                const lessons = [];
-                snapshot.forEach(doc => lessons.push({id: doc.id, ...doc.data()}));
-                lessons.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-
-                lessons.forEach((lesson) => {
-                    const card = document.createElement('div');
-                    card.className = "group bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition relative flex flex-col cursor-pointer";
-                    const isAdmin = ADMIN_EMAILS.includes(auth.currentUser.email);
-                    card.innerHTML = `
-                        ${isAdmin ? `<button class="delete-lesson-btn absolute top-2 right-2 text-[10px] bg-red-50 text-red-500 px-2 py-1 rounded font-bold hover:bg-red-500 hover:text-white transition">Delete</button>` : ''}
-                        <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center mb-4 font-bold text-sm">${lesson.questions?.length || 0}Q</div>
-                        <h3 class="font-bold text-lg text-gray-900">${lesson.title}</h3>
-                        <p class="text-xs text-gray-500 mt-2 line-clamp-2 flex-grow">${lesson.description}</p>
-                        <button class="start-btn mt-4 w-full py-2.5 bg-gray-50 text-blue-600 text-sm font-bold rounded-xl group-hover:bg-blue-600 group-hover:text-white transition">Start Learning</button>
-                    `;
-                    card.querySelector('.start-btn').onclick = () => openLesson(lesson);
-                    if (isAdmin) {
-                        card.querySelector('.delete-lesson-btn').onclick = async (e) => {
-                            e.stopPropagation();
-                            if (confirm("Delete this lesson?")) {
-                                await deleteDoc(doc(db, "lessons", lesson.id));
-                                showToast("Lesson deleted.");
-                            }
-                        };
-                    }
-                    grid.appendChild(card);
-                });
-                if (snapshot.empty) grid.innerHTML = `<div class="col-span-full py-10 text-center text-gray-400 italic">No lessons yet.</div>`;
-            });
-        }
-
-        async function syncUserStats(user) {
+            btn.disabled = true;
             try {
-                const userRef = doc(db, "users", user.uid);
-                const snap = await getDoc(userRef);
-                if (!snap.exists()) {
-                    const defaultData = { xp: 0, level: 1, streak: 1, lastLogin: serverTimestamp(), completedLessons: [], username: "Learner" };
-                    await setDoc(userRef, defaultData);
-                    updateUIStats(0, 1, 1, "Learner");
-                } else {
-                    const data = snap.data();
-                    updateUIStats(data.xp || 0, data.level || 1, data.streak || 1, data.username || "Learner");
-                }
-            } catch (err) { console.warn("Sync error", err); }
+                await addDoc(collection(db, "lessons"), {
+                    title, description: desc, notes: notes, questions,
+                    createdAt: serverTimestamp(), createdBy: auth.currentUser.email
+                });
+                ['lesson-title', 'lesson-desc', 'lesson-notes'].forEach(id => document.getElementById(id).value = '');
+                elements.qList.innerHTML = '';
+                addNewQuestion();
+                window.showToast("Lesson published!");
+            } catch (e) { window.showToast(e.message, true); } finally { btn.disabled = false; }
+        };
+
+        // UI Helpers
+        document.getElementById('logout-btn').onclick = () => signOut(auth);
+        document.getElementById('close-modal-btn').onclick = () => document.getElementById('lesson-modal').classList.add('hidden');
+        document.getElementById('finish-lesson-btn').onclick = () => document.getElementById('lesson-modal').classList.add('hidden');
+    </script>
+</body>
+</html>
+
+<!--Chatbot functionality below-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penny | Prudent Finance Tutor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;700&display=swap');
+        
+        body {
+            font-family: 'Lexend', sans-serif;
+            background: #ffffff;
+            margin: 0;
+            overflow-x: hidden;
         }
 
-        document.getElementById('logout-btn').onclick = () => signOut(auth);
+        .chat-container {
+            height: 85vh;
+            max-width: 500px;
+            width: 90vw;
+        }
+
+        .message-bubble {
+            max-width: 85%;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #bbf7d0;
+            border-radius: 10px;
+        }
+
+        .typing-dots span {
+            animation: blink 1.4s infinite both;
+            height: 6px;
+            width: 6px;
+            background: #16a34a;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 1px;
+        }
+
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes blink {
+            0% { opacity: .2; }
+            20% { opacity: 1; }
+            100% { opacity: .2; }
+        }
+
+        /* Modal specific styles */
+        #penny-modal {
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #penny-modal.hidden {
+            display: none;
+            opacity: 0;
+            visibility: hidden;
+        }
+        #penny-modal:not(.hidden) {
+            display: flex;
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Floating Trigger Button -->
+    <button onclick="toggleModal()" class="fixed bottom-6 right-6 w-16 h-16 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-transform active:scale-90 z-50">
+        <i class="fas fa-comment-dots text-2xl"></i>
+    </button>
+
+    <!-- Modal Overlay -->
+    <div id="penny-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] items-center justify-center p-4">
+        
+        <!-- Chat Container -->
+        <div class="chat-container bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden border-4 border-green-100 relative">
+            
+            <!-- Header -->
+            <div class="bg-green-600 p-4 flex items-center gap-3 shadow-md">
+                <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-green-600 shadow-inner">
+                    <i class="fas fa-piggy-bank text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-white font-bold text-lg leading-none">Penny</h1>
+                    <p class="text-green-100 text-xs mt-1">Your Prudent Finance Tutor</p>
+                </div>
+                <div class="ml-auto flex gap-4">
+                    <button onclick="resetChat()" class="text-green-100 hover:text-white transition-colors">
+                        <i class="fas fa-rotate-right"></i>
+                    </button>
+                    <button onclick="toggleModal()" class="text-green-100 hover:text-white transition-colors">
+                        <i class="fas fa-xmark text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div id="chat-window" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-slate-50">
+                <div class="flex justify-start">
+                    <div class="message-bubble bg-white border border-green-100 text-slate-700 p-4 rounded-2xl rounded-tl-none shadow-sm">
+                        Hey there! I'm <b>Penny</b>. 👋 I'm here to help you master your money. Want to learn about budgeting, or should I start a quick quiz for you?
+                    </div>
+                </div>
+            </div>
+
+            <!-- Typing Indicator -->
+            <div id="typing-indicator" class="hidden px-6 py-2">
+                <div class="typing-dots flex items-center gap-1">
+                    <span class="text-xs text-green-600 font-medium mr-2 italic">Penny is thinking</span>
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="p-4 bg-white border-t border-slate-100">
+                <form id="chat-form" class="flex gap-2">
+                    <input 
+                        type="text" 
+                        id="user-input" 
+                        autocomplete="off"
+                        placeholder="Ask about savings, stocks, or 'Quiz me'..." 
+                        class="flex-1 bg-slate-100 border-none rounded-2xl px-5 py-3 focus:ring-2 focus:ring-green-500 outline-none text-slate-700"
+                    >
+                    <button 
+                        type="submit" 
+                        class="bg-green-600 hover:bg-green-700 text-white w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 shadow-lg shadow-green-200"
+                    >
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+                <p class="text-[10px] text-center text-slate-400 mt-3 italic">
+                    Penny provides educational info, not financial advice.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Modal Logic
+        const modal = document.getElementById('penny-modal');
+        function toggleModal() {
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                document.getElementById('user-input').focus();
+            }
+        }
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) toggleModal();
+        });
+
+        const API_KEY = "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";
+        const SYSTEM_PROMPT = `You are Penny, a friendly and encouraging financial literacy tutor for Prudent Finance — a fun, gamified learning app for young people.
+
+Your role is to:
+1. Answer personal finance questions clearly and simply (budgeting, saving, investing, credit, taxes, stocks, etc.)
+2. Quiz users when they ask — create short, fun multiple-choice or true/false questions on financial topics
+3. Explain lesson content from the app in simple, relatable terms
+4. Use analogies and real-world examples that teenagers and young adults can relate to
+5. Be encouraging and positive — never make users feel dumb for not knowing something
+
+Rules:
+- Keep responses concise and easy to read (use bullet points or numbered lists when helpful)
+- Never give specific investment advice or recommend specific stocks
+- If asked about something unrelated to finance or learning, gently redirect back to finance topics
+- Use light, friendly language — you're a tutor, not a bank
+- When quizzing, always reveal the answer and explain why after the user responds`;
+
+        const chatWindow = document.getElementById('chat-window');
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const typingIndicator = document.getElementById('typing-indicator');
+
+        let messageHistory = [];
+
+        async function fetchAIResponse(userMessage) {
+            const endpoint = "https://openrouter.ai/api/v1/chat/completions";
+            
+            messageHistory.push({ role: "user", content: userMessage });
+
+            const payload = {
+                model: "google/gemini-2.0-flash-001", 
+                messages: [
+                    { role: "system", content: SYSTEM_PROMPT },
+                    ...messageHistory
+                ],
+                temperature: 0.7
+            };
+
+            const maxRetries = 5;
+            let delay = 1000;
+
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${API_KEY}`,
+                            'X-Title': 'Prudent Finance Penny'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(`API Error: ${errorData.error?.message || response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    return data.choices[0].message.content;
+
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        function appendMessage(role, text) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = `message-bubble p-4 rounded-2xl shadow-sm ${
+                role === 'user' 
+                ? 'bg-green-600 text-white rounded-tr-none' 
+                : 'bg-white border border-green-100 text-slate-700 rounded-tl-none'
+            }`;
+            
+            const formattedText = text
+                .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                .replace(/\n/g, '<br>');
+                
+            bubble.innerHTML = formattedText;
+            wrapper.appendChild(bubble);
+            chatWindow.appendChild(wrapper);
+            
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            userInput.value = '';
+            appendMessage('user', message);
+
+            typingIndicator.classList.remove('hidden');
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+
+            try {
+                const aiResponse = await fetchAIResponse(message);
+                typingIndicator.classList.add('hidden');
+                
+                appendMessage('penny', aiResponse);
+                messageHistory.push({ role: "assistant", content: aiResponse });
+                
+                if (messageHistory.length > 12) {
+                    messageHistory = messageHistory.slice(-12);
+                }
+
+            } catch (error) {
+                typingIndicator.classList.add('hidden');
+                appendMessage('penny', "Oh no! My piggy bank is jammed. I'm having trouble connecting to my brain right now. 🏦");
+                console.error("Chat Error:", error);
+            }
+        });
+
+        function resetChat() {
+            chatWindow.innerHTML = `
+                <div class="flex justify-start">
+                    <div class="message-bubble bg-white border border-green-100 text-slate-700 p-4 rounded-2xl rounded-tl-none shadow-sm">
+                        Conversation restarted! What should we talk about now? Savings, investing, or maybe a quiz?
+                    </div>
+                </div>
+            `;
+            messageHistory = [];
+        }
     </script>
 </body>
 </html>

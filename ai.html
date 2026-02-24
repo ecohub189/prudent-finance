@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penny | Prudent Finance Tutor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;700&display=swap');
+        
+        body {
+            font-family: 'Lexend', sans-serif;
+            background: #ffffff;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .chat-container {
+            height: 85vh;
+            max-width: 500px;
+            width: 90vw;
+        }
+
+        .message-bubble {
+            max-width: 85%;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #bbf7d0;
+            border-radius: 10px;
+        }
+
+        .typing-dots span {
+            animation: blink 1.4s infinite both;
+            height: 6px;
+            width: 6px;
+            background: #16a34a;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 1px;
+        }
+
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes blink {
+            0% { opacity: .2; }
+            20% { opacity: 1; }
+            100% { opacity: .2; }
+        }
+
+        /* Modal specific styles */
+        #penny-modal {
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #penny-modal.hidden {
+            display: none;
+            opacity: 0;
+            visibility: hidden;
+        }
+        #penny-modal:not(.hidden) {
+            display: flex;
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- Floating Trigger Button -->
+    <button onclick="toggleModal()" class="fixed bottom-6 right-6 w-16 h-16 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-transform active:scale-90 z-50">
+        <i class="fas fa-comment-dots text-2xl"></i>
+    </button>
+
+    <!-- Modal Overlay -->
+    <div id="penny-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] items-center justify-center p-4">
+        
+        <!-- Chat Container -->
+        <div class="chat-container bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden border-4 border-green-100 relative">
+            
+            <!-- Header -->
+            <div class="bg-green-600 p-4 flex items-center gap-3 shadow-md">
+                <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-green-600 shadow-inner">
+                    <i class="fas fa-piggy-bank text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-white font-bold text-lg leading-none">Penny</h1>
+                    <p class="text-green-100 text-xs mt-1">Your Prudent Finance Tutor</p>
+                </div>
+                <div class="ml-auto flex gap-4">
+                    <button onclick="resetChat()" class="text-green-100 hover:text-white transition-colors">
+                        <i class="fas fa-rotate-right"></i>
+                    </button>
+                    <button onclick="toggleModal()" class="text-green-100 hover:text-white transition-colors">
+                        <i class="fas fa-xmark text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div id="chat-window" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-slate-50">
+                <div class="flex justify-start">
+                    <div class="message-bubble bg-white border border-green-100 text-slate-700 p-4 rounded-2xl rounded-tl-none shadow-sm">
+                        Hey there! I'm <b>Penny</b>. 👋 I'm here to help you master your money. Want to learn about budgeting, or should I start a quick quiz for you?
+                    </div>
+                </div>
+            </div>
+
+            <!-- Typing Indicator -->
+            <div id="typing-indicator" class="hidden px-6 py-2">
+                <div class="typing-dots flex items-center gap-1">
+                    <span class="text-xs text-green-600 font-medium mr-2 italic">Penny is thinking</span>
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="p-4 bg-white border-t border-slate-100">
+                <form id="chat-form" class="flex gap-2">
+                    <input 
+                        type="text" 
+                        id="user-input" 
+                        autocomplete="off"
+                        placeholder="Ask about savings, stocks, or 'Quiz me'..." 
+                        class="flex-1 bg-slate-100 border-none rounded-2xl px-5 py-3 focus:ring-2 focus:ring-green-500 outline-none text-slate-700"
+                    >
+                    <button 
+                        type="submit" 
+                        class="bg-green-600 hover:bg-green-700 text-white w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 shadow-lg shadow-green-200"
+                    >
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+                <p class="text-[10px] text-center text-slate-400 mt-3 italic">
+                    Penny provides educational info, not financial advice.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Modal Logic
+        const modal = document.getElementById('penny-modal');
+        function toggleModal() {
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                document.getElementById('user-input').focus();
+            }
+        }
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) toggleModal();
+        });
+
+        const API_KEY = "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";
+        const SYSTEM_PROMPT = `You are Penny, a friendly and encouraging financial literacy tutor for Prudent Finance — a fun, gamified learning app for young people.
+
+Your role is to:
+1. Answer personal finance questions clearly and simply (budgeting, saving, investing, credit, taxes, stocks, etc.)
+2. Quiz users when they ask — create short, fun multiple-choice or true/false questions on financial topics
+3. Explain lesson content from the app in simple, relatable terms
+4. Use analogies and real-world examples that teenagers and young adults can relate to
+5. Be encouraging and positive — never make users feel dumb for not knowing something
+
+Rules:
+- Keep responses concise and easy to read (use bullet points or numbered lists when helpful)
+- Never give specific investment advice or recommend specific stocks
+- If asked about something unrelated to finance or learning, gently redirect back to finance topics
+- Use light, friendly language — you're a tutor, not a bank
+- When quizzing, always reveal the answer and explain why after the user responds`;
+
+        const chatWindow = document.getElementById('chat-window');
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const typingIndicator = document.getElementById('typing-indicator');
+
+        let messageHistory = [];
+
+        async function fetchAIResponse(userMessage) {
+            const endpoint = "https://openrouter.ai/api/v1/chat/completions";
+            
+            messageHistory.push({ role: "user", content: userMessage });
+
+            const payload = {
+                model: "google/gemini-2.0-flash-001", 
+                messages: [
+                    { role: "system", content: SYSTEM_PROMPT },
+                    ...messageHistory
+                ],
+                temperature: 0.7
+            };
+
+            const maxRetries = 5;
+            let delay = 1000;
+
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${API_KEY}`,
+                            'X-Title': 'Prudent Finance Penny'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(`API Error: ${errorData.error?.message || response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    return data.choices[0].message.content;
+
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        function appendMessage(role, text) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = `message-bubble p-4 rounded-2xl shadow-sm ${
+                role === 'user' 
+                ? 'bg-green-600 text-white rounded-tr-none' 
+                : 'bg-white border border-green-100 text-slate-700 rounded-tl-none'
+            }`;
+            
+            const formattedText = text
+                .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+                .replace(/\n/g, '<br>');
+                
+            bubble.innerHTML = formattedText;
+            wrapper.appendChild(bubble);
+            chatWindow.appendChild(wrapper);
+            
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            userInput.value = '';
+            appendMessage('user', message);
+
+            typingIndicator.classList.remove('hidden');
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+
+            try {
+                const aiResponse = await fetchAIResponse(message);
+                typingIndicator.classList.add('hidden');
+                
+                appendMessage('penny', aiResponse);
+                messageHistory.push({ role: "assistant", content: aiResponse });
+                
+                if (messageHistory.length > 12) {
+                    messageHistory = messageHistory.slice(-12);
+                }
+
+            } catch (error) {
+                typingIndicator.classList.add('hidden');
+                appendMessage('penny', "Oh no! My piggy bank is jammed. I'm having trouble connecting to my brain right now. 🏦");
+                console.error("Chat Error:", error);
+            }
+        });
+
+        function resetChat() {
+            chatWindow.innerHTML = `
+                <div class="flex justify-start">
+                    <div class="message-bubble bg-white border border-green-100 text-slate-700 p-4 rounded-2xl rounded-tl-none shadow-sm">
+                        Conversation restarted! What should we talk about now? Savings, investing, or maybe a quiz?
+                    </div>
+                </div>
+            `;
+            messageHistory = [];
+        }
+    </script>
+</body>
+</html>

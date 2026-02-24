@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Tools - Prudent Finance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;700&display=swap');
+        body { font-family: 'Lexend', sans-serif; background: #f8fafc; }
+        .tool-card { transition: all 0.3s ease; }
+        .active-tab { border-bottom: 4px solid #2563eb; color: #2563eb; }
+        .hidden { display: none !important; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        .loading-shimmer {
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body class="pb-20">
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center space-x-6">
+            <!-- Back Button -->
+            <a href="home.html" class="flex items-center gap-2 text-gray-500 hover:text-blue-600 font-bold transition">
+                <i class="fas fa-arrow-left"></i>
+                <span class="hidden sm:inline">Home</span>
+            </a>
+            <div class="h-6 w-px bg-gray-200"></div>
+            <div class="flex items-center space-x-2">
+                <div class="bg-blue-600 text-white p-1.5 rounded-lg font-bold">PF</div>
+                <span class="text-xl font-bold tracking-tight text-gray-900">Financial Lab</span>
+            </div>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
+                <span class="text-xs font-bold text-blue-600 uppercase">Current XP</span>
+                <p id="user-xp" class="font-black text-blue-800 leading-none">---</p>
+            </div>
+            <button onclick="window.location.reload()" class="text-gray-400 hover:text-red-500 transition">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-5xl mx-auto mt-8 px-4">
+        
+        <!-- Tab Navigation -->
+        <div class="flex border-b border-gray-200 mb-8 overflow-x-auto">
+            <button onclick="switchTab('goal')" id="tab-goal" class="px-6 py-3 font-bold text-gray-500 hover:text-blue-600 transition active-tab whitespace-nowrap">🎯 Goal Calculator</button>
+            <button onclick="switchTab('sim')" id="tab-sim" class="px-6 py-3 font-bold text-gray-500 hover:text-blue-600 transition whitespace-nowrap">📈 Savings Simulator</button>
+        </div>
+
+        <!-- Section 1: Goal Calculator -->
+        <section id="sect-goal" class="tool-card bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div class="space-y-4">
+                    <h2 class="text-2xl font-black text-gray-900">Reach Your Goal</h2>
+                    <p class="text-gray-500">Calculate exactly how long it takes to save for that big purchase.</p>
+                    
+                    <div class="space-y-4 pt-4">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-600 mb-1">What are you saving for?</label>
+                            <input type="text" id="goal-name" placeholder="New Laptop, Car, College..." class="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-600 mb-1">Goal Amount ($)</label>
+                                <input type="number" id="goal-target" value="1000" class="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-600 mb-1">Saved So Far ($)</label>
+                                <input type="number" id="goal-current" value="200" class="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-600 mb-1">Monthly Income ($)</label>
+                                <input type="number" id="goal-income" value="500" class="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-600 mb-1">Monthly Expenses ($)</label>
+                                <input type="number" id="goal-expenses" value="300" class="w-full p-3 rounded-xl bg-gray-50 border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                        <button onclick="calculateGoal()" id="goal-btn" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition shadow-lg active:scale-95 flex items-center justify-center gap-2">
+                            <span>Analyze Goal</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="goal-results" class="bg-gray-50 rounded-3xl p-8 flex flex-col border border-gray-100 min-h-[400px]">
+                    <div class="text-center mb-6">
+                        <p class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">Time Remaining</p>
+                        <h3 id="goal-time-res" class="text-4xl font-black text-blue-600">---</h3>
+                    </div>
+                    
+                    <div class="bg-white p-4 rounded-2xl border border-gray-100 mb-6">
+                        <p class="text-xs font-bold text-gray-400">PROGRESS</p>
+                        <div class="flex justify-between items-end mb-1">
+                            <span id="goal-percent" class="text-xl font-bold text-gray-800">0%</span>
+                            <span class="text-xs font-medium text-gray-500" id="goal-amount-label">$0 / $0</span>
+                        </div>
+                        <div class="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                            <div id="goal-bar" class="h-full bg-blue-500 transition-all duration-1000" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div id="ai-advice-container" class="space-y-3">
+                        <div class="flex items-center gap-2 text-blue-600">
+                            <i class="fas fa-piggy-bank"></i>
+                            <span class="text-xs font-black uppercase">Penny's Strategy</span>
+                        </div>
+                        <div id="goal-advice" class="p-4 rounded-2xl bg-white border-2 border-blue-50 text-blue-900 text-sm leading-relaxed italic">
+                            Fill in your details to get a personalized savings strategy from Penny!
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Savings Simulator -->
+        <section id="sect-sim" class="tool-card hidden bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                <div class="lg:col-span-1 space-y-6">
+                    <h2 class="text-2xl font-black text-gray-900">Compound Interest Simulator</h2>
+                    <p class="text-gray-500 text-sm">See how your money grows over time with the power of compounding.</p>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-black text-gray-400 uppercase mb-1">Initial Deposit ($)</label>
+                            <input type="number" id="sim-deposit" value="1000" class="w-full p-3 rounded-xl bg-gray-50 border border-gray-200">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-black text-gray-400 uppercase mb-1">Monthly Contribution ($)</label>
+                            <input type="number" id="sim-monthly" value="100" class="w-full p-3 rounded-xl bg-gray-50 border border-gray-200">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-black text-gray-400 uppercase mb-1">Annual Interest Rate (%)</label>
+                            <input type="number" id="sim-rate" value="7" step="0.1" class="w-full p-3 rounded-xl bg-gray-50 border border-gray-200">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-black text-gray-400 uppercase mb-1">Time Period (Years)</label>
+                            <input type="range" id="sim-years" min="1" max="50" value="10" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                            <div class="flex justify-between text-xs font-bold text-gray-500 mt-1">
+                                <span>1 Year</span>
+                                <span id="year-label" class="text-blue-600">10 Years</span>
+                                <span>50 Years</span>
+                            </div>
+                        </div>
+                        <button onclick="runSimulation()" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition">Simulate Growth</button>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                            <p class="text-[10px] font-black text-gray-400 uppercase">Final Amount</p>
+                            <p id="res-total" class="text-xl font-black text-blue-600">$0</p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                            <p class="text-[10px] font-black text-gray-400 uppercase">Total Contributed</p>
+                            <p id="res-invested" class="text-xl font-bold text-gray-700">$0</p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                            <p class="text-[10px] font-black text-gray-400 uppercase">Interest Earned</p>
+                            <p id="res-interest" class="text-xl font-bold text-green-600">$0</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-3xl border border-gray-100 h-[300px]">
+                        <canvas id="growthChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, updateDoc, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyAIJzGEUMmy1dSc6dRNFGeBZLVwd7IKA-A",
+            authDomain: "prudentfinanceauth.firebaseapp.com",
+            projectId: "prudentfinanceauth",
+            storageBucket: "prudentfinanceauth.firebasestorage.app",
+            messagingSenderId: "78320382961",
+            appId: "1:78320382961:web:1751b6b8a48d39da1d0a50"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        const OPENROUTER_KEY = "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";
+        let userProfile = null;
+        let growthChart = null;
+
+        // --- Auth ---
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) { await signInAnonymously(auth); return; }
+            const snap = await getDoc(doc(db, "users", user.uid));
+            if (snap.exists()) {
+                userProfile = snap.data();
+                document.getElementById('user-xp').textContent = userProfile.xp || 0;
+            } else {
+                await setDoc(doc(db, "users", user.uid), { xp: 0, level: 1, completedTools: [] });
+                document.getElementById('user-xp').textContent = 0;
+            }
+        });
+
+        // --- OpenRouter AI Handler ---
+        async function fetchPennyAdvice(prompt) {
+            try {
+                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${OPENROUTER_KEY}`,
+                        "X-Title": "Prudent Finance Tools"
+                    },
+                    body: JSON.stringify({
+                        model: "google/gemini-2.0-flash-001",
+                        messages: [
+                            { role: "system", content: "You are Penny, a witty and encouraging financial tutor for teenagers. Give actionable, clever advice in exactly 2 sentences. Use one emoji." },
+                            { role: "user", content: prompt }
+                        ]
+                    })
+                });
+                const data = await response.json();
+                return data.choices?.[0]?.message?.content || "Keep saving those pennies, you're doing great!";
+            } catch (err) {
+                console.error(err);
+                return "My circuits are jammed, but keep saving!";
+            }
+        }
+
+        // --- Goal Calculator Logic ---
+        window.calculateGoal = async () => {
+            const btn = document.getElementById('goal-btn');
+            const name = document.getElementById('goal-name').value || "Your Goal";
+            const target = parseFloat(document.getElementById('goal-target').value);
+            const current = parseFloat(document.getElementById('goal-current').value);
+            const income = parseFloat(document.getElementById('goal-income').value);
+            const expenses = parseFloat(document.getElementById('goal-expenses').value);
+            const adviceEl = document.getElementById('goal-advice');
+
+            const savingsRate = income - expenses;
+            const remaining = target - current;
+
+            // Math Updates
+            const percent = Math.min(100, Math.max(0, (current / target) * 100));
+            document.getElementById('goal-bar').style.width = percent + '%';
+            document.getElementById('goal-percent').textContent = Math.round(percent) + '%';
+            document.getElementById('goal-amount-label').textContent = `$${current.toLocaleString()} / $${target.toLocaleString()}`;
+
+            let resultText = "";
+            if (savingsRate <= 0) {
+                document.getElementById('goal-time-res').textContent = "Never";
+                resultText = `Target: ${name}. Alert: User has zero or negative savings capacity (Expenses: $${expenses}, Income: $${income}).`;
+            } else {
+                const months = Math.ceil(remaining / savingsRate);
+                document.getElementById('goal-time-res').textContent = months > 18 ? `${(months/12).toFixed(1)} Years` : `${months} Months`;
+                resultText = `Target: ${name}. Amount: $${target}. Savings: $${savingsRate}/mo. Current Saved: $${current}.`;
+            }
+
+            // Trigger AI Strategy
+            btn.disabled = true;
+            adviceEl.innerHTML = '<div class="h-4 w-full loading-shimmer rounded mb-2"></div><div class="h-4 w-2/3 loading-shimmer rounded"></div>';
+            
+            const aiPrompt = `The user wants to save for: ${name}. Here is the status: ${resultText}. Provide a specific strategy to reach this faster.`;
+            const advice = await fetchPennyAdvice(aiPrompt);
+            
+            adviceEl.textContent = advice;
+            btn.disabled = false;
+            
+            awardXP('Goal Calculator');
+            saveToHistory('goal', { name, target, savingsRate });
+        };
+
+        // --- Simulator Logic ---
+        window.runSimulation = () => {
+            const dep = parseFloat(document.getElementById('sim-deposit').value);
+            const monthly = parseFloat(document.getElementById('sim-monthly').value);
+            const rate = parseFloat(document.getElementById('sim-rate').value) / 100 / 12;
+            const years = parseInt(document.getElementById('sim-years').value);
+            
+            let total = dep, invested = dep, hist = [dep], labs = ['Year 0'];
+            for(let i=1; i<=years*12; i++) {
+                total = (total + monthly) * (1 + rate);
+                invested += monthly;
+                if(i%12===0) { hist.push(Math.round(total)); labs.push(`Year ${i/12}`); }
+            }
+
+            document.getElementById('res-total').textContent = `$${Math.round(total).toLocaleString()}`;
+            document.getElementById('res-invested').textContent = `$${invested.toLocaleString()}`;
+            document.getElementById('res-interest').textContent = `$${Math.round(total-invested).toLocaleString()}`;
+            updateChart(labs, hist);
+            awardXP('Savings Simulator');
+        };
+
+        function updateChart(l, d) {
+            const ctx = document.getElementById('growthChart').getContext('2d');
+            if(growthChart) growthChart.destroy();
+            growthChart = new Chart(ctx, {
+                type: 'line',
+                data: { 
+                    labels: l, 
+                    datasets: [{ 
+                        data: d, 
+                        borderColor: '#2563eb', 
+                        borderWidth: 3,
+                        fill: true, 
+                        backgroundColor: 'rgba(37,99,235,0.05)', 
+                        tension: 0.4,
+                        pointBackgroundColor: '#2563eb'
+                    }] 
+                },
+                options: { 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { ticks: { callback: (v) => '$' + v.toLocaleString() } }
+                    }
+                }
+            });
+        }
+
+        // --- Core Helpers ---
+        async function awardXP(tool) {
+            if (!auth.currentUser || !userProfile) return;
+            if (userProfile.completedTools?.includes(tool)) return;
+            const xp = (userProfile.xp || 0) + 20;
+            await updateDoc(doc(db, "users", auth.currentUser.uid), { xp, completedTools: arrayUnion(tool) });
+            userProfile.xp = xp; document.getElementById('user-xp').textContent = xp;
+        }
+
+        async function saveToHistory(type, data) {
+            if (!auth.currentUser) return;
+            const historyRef = doc(db, 'artifacts', 'prudent-finance', 'users', auth.currentUser.uid, 'toolHistory', type);
+            await setDoc(historyRef, { ...data, timestamp: new Date().toISOString() }, { merge: true });
+        }
+
+        window.switchTab = (t) => {
+            ['goal', 'sim'].forEach(x => { document.getElementById('sect-'+x).classList.add('hidden'); document.getElementById('tab-'+x).classList.remove('active-tab'); });
+            document.getElementById('sect-'+t).classList.remove('hidden'); document.getElementById('tab-'+t).classList.add('active-tab');
+        };
+
+        document.getElementById('sim-years').oninput = (e) => document.getElementById('year-label').textContent = e.target.value + " Years";
+        window.onload = runSimulation;
+    </script>
+</body>
+</html>
